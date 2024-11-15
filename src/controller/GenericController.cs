@@ -18,5 +18,5 @@ public class GenericController : ControllerBase
         short statusId = BeginRequest(ctx, HttpStatusCode.OK);
         using Message<string> res = new(statusId, "Test", false);
         await context.Response.Send(res.AsJsonString());
-    }    
+    }
 }

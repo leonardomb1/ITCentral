@@ -1,35 +1,32 @@
 namespace ITCentral.Common;
 using System.Reflection;
+using ITCentral.Data;
 
 public static class AppCommon
 {
     public const bool Success = true;
-    public const byte Exists = 1;
     public const string ProgramVersion = "0.0.1";
     public const string ProgramName = "ITCentral";
-    private static int port;
-    private static string conStr = "";
-    private static bool isSsl;
-    private static string host = "";
-    public static int PortNumber
+    public const string MessageInfo = "INFO";
+    public const string MessageWarning = "WARN";
+    public const string MessageRequest = "REQUEST";
+    public const string MessageError = "ERROR";
+    public static string LogFilePath {get; private set;} = "";
+    public static TimeSpan LogDumpTime {get; private set;}
+    public static bool Logging {get; private set;}
+    public static int PortNumber {get; private set;}
+    public static string ConnectionString {get; private set;} = "";
+    public static bool Ssl {get; private set;}
+    public static string HostName {get; private set;} = "";
+    public static string DbType {get; private set;} = "";
+    public static IDBCall GenerateCallerInstance()
     {
-        get => port;
-        set => port = value;
-    }
-    public static string ConnectionString
-    {
-        get => conStr;
-        set => conStr = value;
-    }
-    public static bool Ssl
-    {
-        get => isSsl;
-        set => isSsl = value;
-    }
-    public static string HostName
-    {
-        get => host;
-        set => host = value;
+        return DbType switch
+        {
+            _ when DbType == "MSSQL" => new SqlServerCall(ConnectionString),
+            _ when DbType == "SQLite" => new SqlLiteCall(ConnectionString),
+            _ => throw new Exception("Database not supported.")
+        };
     }
     public static void ShowHelp() 
     {
@@ -41,7 +38,7 @@ public static class AppCommon
             "   -v --version   Show version information\n" +
             "   -e --environment    [Options]  Use configuration variables\n\n" +
             "   [Options]: \n" +
-            "   Port, ConnectionString, SSL, Host"
+            "   Port, DbType, ConnectionString, SSL, Host"
             );
     }
 
@@ -58,14 +55,60 @@ public static class AppCommon
         );
     }
 
-    public static void Initialize()
+    public static void InitializeFromArgs(string[] args)
+    {
+        if (args.Length < 5)
+        {
+            throw new ArgumentException("Insufficient arguments provided. Expected 5 arguments.");
+        }
+
+        if (!int.TryParse(args[1], out int port))
+        {
+            throw new ArgumentException("Port value must be an integer.");
+        }
+
+        if (!bool.TryParse(args[4], out bool ssl))
+        {
+            throw new ArgumentException("SSL value must be a boolean.");
+        }
+
+        if (!bool.TryParse(args[6], out bool logging))
+        {
+            throw new ArgumentException("SSL value must be a boolean.");
+        }
+
+        if (!int.TryParse(args[7], out int logTime))
+        {
+            throw new ArgumentException("Log Time value must be an integer.");
+        }
+
+        string db = args[2];
+        string conn = args[3];
+        string hostName = args[5];
+        string logPath = args[9];
+
+        PortNumber = port;
+        DbType = db;
+        ConnectionString = conn;
+        HostName = hostName;
+        Ssl = ssl;
+        Logging = logging;
+        LogFilePath = logPath;
+        LogDumpTime = TimeSpan.FromSeconds(logTime);
+    }
+
+    public static void InitializeFromEnv()
     {
         var envs = new Dictionary<string, string>
         {
-            { "PORT_NUMBER", nameof(ConnectionString) },
+            { "PORT_NUMBER", nameof(PortNumber) },
+            { "DB_TYPE", nameof(DbType) },
             { "CONNECTION_STRING", nameof(ConnectionString) },
-            { "SSL_ENABLED", nameof(ConnectionString) },
-            { "HOST_NAME", nameof(ConnectionString) },
+            { "SSL_ENABLED", nameof(Ssl) },
+            { "HOST_NAME", nameof(HostName) },
+            { "LOGGING", nameof(HostName) },
+            { "LOG_FILE_PATH", nameof(LogFilePath) },
+            { "LOG_DUMP_TIME", nameof(LogDumpTime) },
         };
 
         Dictionary<string, string?> config = envs.ToDictionary(

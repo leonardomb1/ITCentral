@@ -1,4 +1,5 @@
 using ITCentral.Controller;
+using ITCentral.Models;
 using WatsonWebserver.Core;
 
 namespace ITCentral.Router;
@@ -11,7 +12,7 @@ internal abstract class Routes : GenericController
     {
         controllers = new Dictionary<string, IController<HttpContextBase>>
         {
-            { "Cat", new CatController() },
+            { nameof(Cat), new CatController() },
         };
     }
 

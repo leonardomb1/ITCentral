@@ -1,33 +1,40 @@
 using System.Net;
+using System.Reflection;
 using ITCentral.Common;
-using ITCentral.Data;
 using ITCentral.Models;
 using ITCentral.Service;
+using ITCentral.Types;
 using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
 public class CatController : ControllerBase, IController<HttpContextBase>
 {
-    public async Task Get(HttpContextBase ctx)
+    public CatController()
     {
+        var callerInstance = AppCommon.GenerateCallerInstance();
+        Type instanceType = callerInstance.GetType();
+        serviceType = typeof(CatService<>).MakeGenericType(instanceType);
+
+        serviceInstance = Activator.CreateInstance(serviceType!, callerInstance);
+    }
+
+    public async Task Get(HttpContextBase ctx)
+    {       
         short statusId;
 
-        SqlServerCall serverCall = new(AppCommon.ConnectionString);
-        CatService<SqlServerCall> catService = new(serverCall);
-        var result = await catService.Read();
+        MethodInfo method = serviceType!.GetMethod("Read", [])!;
+        var result = await (Task<Result<List<Cat>, Error>>) method.Invoke(serviceInstance, null)!;
 
         if(!result.IsSuccessful) {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [result.Error]);
-            await context.Response.Send(errMsg.AsJsonString());
+            await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        List<Cat?> cats = result.Value;
+        List<Cat?> cats = result.Value!;
 
-        using Message<Cat> res = new(statusId, "OK", false, [..cats]);
+        using Message<Cat> res = new(statusId, "OK", false, [..cats!]);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -35,9 +42,8 @@ public class CatController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        SqlServerCall serverCall = new(AppCommon.ConnectionString);
-        CatService<SqlServerCall> catService = new(serverCall);
-        
+        MethodInfo method = serviceType!.GetMethod("Read", [typeof(int)])!;
+
         if(!int.TryParse(ctx.Request.Url.Parameters["catId"], null, out int catId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -45,12 +51,10 @@ public class CatController : ControllerBase, IController<HttpContextBase>
             return;
         } 
 
-        var result = await catService.Read(catId);
+        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [catId])!;
 
         if(!result.IsSuccessful) {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [result.Error]);
-            await context.Response.Send(errMsg.AsJsonString());
+            await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
@@ -72,8 +76,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        SqlServerCall serverCall = new(AppCommon.ConnectionString);
-        CatService<SqlServerCall> catService = new(serverCall);
+        MethodInfo method = serviceType!.GetMethod("Save", [typeof(Cat)])!;
 
         var body = Converter.TryDeserializeJson<Cat>(ctx.Request.DataAsString);
 
@@ -85,12 +88,10 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         Cat cat = body.Value;
-        var result = await catService.Save(cat);
-        
+        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [cat])!;
+
         if(!result.IsSuccessful) {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [result.Error]);
-            await context.Response.Send(errMsg.AsJsonString());
+            await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
@@ -103,8 +104,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        SqlServerCall serverCall = new(AppCommon.ConnectionString);
-        CatService<SqlServerCall> catService = new(serverCall);
+        MethodInfo method = serviceType!.GetMethod("Save", [typeof(Cat), typeof(int)])!;
 
         var body = Converter.TryDeserializeJson<Cat>(ctx.Request.DataAsString);
 
@@ -123,7 +123,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         } 
 
         Cat cat = body.Value;
-        var result = await catService.Save(cat, catId);
+        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [cat, catId])!;
 
         if(result.Value!.Id is null) {
             statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
@@ -133,9 +133,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
         
         if(!result.IsSuccessful) {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [result.Error]);
-            await context.Response.Send(errMsg.AsJsonString());
+            await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
@@ -148,8 +146,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        SqlServerCall serverCall = new(AppCommon.ConnectionString);
-        CatService<SqlServerCall> catService = new(serverCall);
+        MethodInfo method = serviceType!.GetMethod("Delete")!;
 
         if(!int.TryParse(ctx.Request.Url.Parameters["catId"], null, out int catId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
@@ -158,12 +155,10 @@ public class CatController : ControllerBase, IController<HttpContextBase>
             return;
         } 
 
-        var result = await catService.Delete(catId);
+        var result = await (Task<Result<bool, Error>>) method.Invoke(serviceInstance, [catId])!;
         
         if(!result.IsSuccessful) {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [result.Error]);
-            await context.Response.Send(errMsg.AsJsonString());
+            await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
@@ -171,4 +166,5 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         using Message<Cat> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
+
 }

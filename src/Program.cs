@@ -7,7 +7,6 @@ public class Program
 {
     public static void Main(string[] args)
     {
-
         if (args.Contains("--help") || args.Contains("-h")) {
             AppCommon.ShowHelp();
             return;
@@ -29,16 +28,9 @@ public class Program
     private static void Run(bool isCmd, string[] args)
     {
         if(!isCmd) {
-            AppCommon.Initialize();
+            AppCommon.InitializeFromEnv();
         } else {
-            var values = args.Skip(1);
-
-            if(!int.TryParse(values.ElementAt(0), null, out int port)) throw new Exception("Value must be an integer.");
-            AppCommon.ConnectionString = values.ElementAt(1);
-            if(!bool.TryParse(values.ElementAt(2), out bool ssl)) throw new Exception("Value must be a boolean.");
-            AppCommon.PortNumber = port;
-            AppCommon.Ssl = ssl;
-            AppCommon.HostName = values.ElementAt(3);
+            AppCommon.InitializeFromArgs(args);
         }
 
         Server server = new();
