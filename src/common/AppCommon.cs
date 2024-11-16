@@ -21,6 +21,7 @@ public static class AppCommon
     public static string HostName {get; private set;} = "";
     public static string DbType {get; private set;} = "";
     public static string MasterKey {get; private set;} = "";
+    public static string ApiKey {get; private set;} = "";
     public static IDBCall GenerateCallerInstance()
     {
         return DbType switch
@@ -93,7 +94,8 @@ public static class AppCommon
         string conn = args[3];
         string hostName = args[5];
         string logPath = args[8];
-        string key = args[9];
+        string masterKey = args[9];
+        string apiKey = args[11];
 
         PortNumber = port;
         DbType = db;
@@ -103,8 +105,9 @@ public static class AppCommon
         Logging = logging;
         LogFilePath = logPath;
         LogDumpTime = TimeSpan.FromSeconds(logTime);
-        MasterKey = key;
+        MasterKey = masterKey;
         SessionTime = TimeSpan.FromSeconds(sessionTime);
+        ApiKey = apiKey;
     }
 
     public static void InitializeFromEnv()
@@ -121,6 +124,7 @@ public static class AppCommon
             { "LOG_DUMP_TIME", nameof(LogDumpTime) },
             { "ENCRYPT_KEY", nameof(MasterKey) },
             { "SESSION_TIME", nameof(MasterKey) },
+            { "API_KEY", nameof(ApiKey) },
         };
 
         Dictionary<string, string?> config = envs.ToDictionary(

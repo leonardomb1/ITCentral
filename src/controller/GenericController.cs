@@ -1,5 +1,6 @@
 using System.Net;
 using ITCentral.App;
+using ITCentral.Common;
 using ITCentral.Models;
 using WatsonWebserver.Core;
 
@@ -16,6 +17,10 @@ public class GenericController : ControllerBase
     public static async Task Authenticate(HttpContextBase ctx)
     {
         if(ctx.Request.Url.RawWithoutQuery == "/api/users/login") return;
+        if(ctx.Request.HeaderExists("Key"))
+        {
+            if(ctx.Request.Headers.Get("Key") == AppCommon.ApiKey) return;
+        }
         if(!ctx.Request.HeaderExists("Authorization"))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
