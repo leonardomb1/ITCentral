@@ -1,5 +1,5 @@
 using System.Net;
-using ITCentral.Common;
+using ITCentral.App;
 using ITCentral.Models;
 using WatsonWebserver.Core;
 
@@ -26,7 +26,7 @@ public class GenericController : ControllerBase
 
         string sessionId = ctx.Request.Headers.Get("Authorization")!;
 
-        if(AppCommon.ValidateSessionId(ctx.Request.Source.IpAddress, sessionId))
+        if(!SessionManager.IsSessionValid(sessionId))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);

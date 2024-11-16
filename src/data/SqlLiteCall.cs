@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace ITCentral.Data;
 
-public class SqlLiteCall : CallBase, IDisposable, IDBCall
+public class SqlLiteCall : CallBase, IDisposable
 {
     private readonly SqliteConnection connection;
     private bool disposed = false;

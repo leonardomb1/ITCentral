@@ -250,18 +250,18 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    public async Task<Result<bool, Error>> DeleteFromDb<T, ID>(ID id)
+    public async Task<Result<bool, Error>> DeleteFromDb<T, ID, V>(ID id, V val)
     {
         var tableName = GetTableName(typeof(T));
 
-        var query = $"DELETE FROM {tableName} WHERE Id = @tableId";
+        var query = $"DELETE FROM {tableName} WHERE {id} = @tableId";
 
         try
         {
             using var command = CreateDbCommand(query);
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tableId";
-            parameter.Value = id;
+            parameter.Value = val;
             command.Parameters.Add(parameter);
 
             await command.ExecuteNonQueryAsync();

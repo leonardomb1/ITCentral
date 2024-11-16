@@ -13,6 +13,7 @@ public static class AppCommon
     public const string MessageError = "ERROR";
     public static string LogFilePath {get; private set;} = "";
     public static TimeSpan LogDumpTime {get; private set;}
+    public static TimeSpan SessionTime {get; private set;}
     public static bool Logging {get; private set;}
     public static int PortNumber {get; private set;}
     public static string ConnectionString {get; private set;} = "";
@@ -41,28 +42,6 @@ public static class AppCommon
             "   [Options]: \n" +
             "   Port, DbType, ConnectionString, SSL, Host, Logging, LogTime, LogPath"
             );
-    }
-
-    public static string GenerateSessionId(string seed)
-    {
-        return Encryption.Sha256($"{seed}{DateTime.Now:yyyy-MM-dd HH:mm}{DateTime.Now.AddMinutes(30):yyyy-MM-dd HH:mm}");
-    }
-
-    public static bool ValidateSessionId(string seed, string token)
-    {
-        string[] parts = token.Split([seed], StringSplitOptions.None);
-        if (parts.Length < 2)
-        {
-            return false;
-        }
-
-        string expirationTimeString = parts[1][^16..];
-        if (DateTime.TryParseExact(expirationTimeString, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out DateTime expirationTime))
-        {
-            return DateTime.Now < expirationTime;
-        }
-
-        return false;
     }
 
     public static void ShowVersion() 
@@ -97,12 +76,17 @@ public static class AppCommon
 
         if (!bool.TryParse(args[6], out bool logging))
         {
-            throw new ArgumentException("SSL value must be a boolean.");
+            throw new ArgumentException("Logging value must be a boolean.");
         }
 
         if (!int.TryParse(args[7], out int logTime))
         {
             throw new ArgumentException("Log Time value must be an integer.");
+        }
+
+        if (!int.TryParse(args[10], out int sessionTime))
+        {
+            throw new ArgumentException("Session Time value must be an integer.");
         }
 
         string db = args[2];
@@ -120,6 +104,7 @@ public static class AppCommon
         LogFilePath = logPath;
         LogDumpTime = TimeSpan.FromSeconds(logTime);
         MasterKey = key;
+        SessionTime = TimeSpan.FromSeconds(sessionTime);
     }
 
     public static void InitializeFromEnv()
@@ -131,10 +116,11 @@ public static class AppCommon
             { "CONNECTION_STRING", nameof(ConnectionString) },
             { "SSL_ENABLED", nameof(Ssl) },
             { "HOST_NAME", nameof(HostName) },
-            { "LOGGING", nameof(HostName) },
+            { "ENABLE_LOG_DUMP", nameof(HostName) },
             { "LOG_FILE_PATH", nameof(LogFilePath) },
             { "LOG_DUMP_TIME", nameof(LogDumpTime) },
             { "ENCRYPT_KEY", nameof(MasterKey) },
+            { "SESSION_TIME", nameof(MasterKey) },
         };
 
         Dictionary<string, string?> config = envs.ToDictionary(

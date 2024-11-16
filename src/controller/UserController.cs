@@ -1,29 +1,19 @@
 using System.Net;
-using System.Reflection;
+using ITCentral.App;
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Service;
-using ITCentral.Types;
 using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
 public class UserController : ControllerBase, IController<HttpContextBase>
 {
-    public UserController()
-    {
-        var callerInstance = AppCommon.GenerateCallerInstance();
-        Type instanceType = callerInstance.GetType();
-        serviceType = typeof(UserService<>).MakeGenericType(instanceType);
-
-        serviceInstance = Activator.CreateInstance(serviceType!, callerInstance);
-    }
     public async Task Get(HttpContextBase ctx)
     {       
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Read", [])!;
-        var result = await (Task<Result<List<User>, Error>>) method.Invoke(serviceInstance, null)!;
+        var result = await new UserService().Get();
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -47,8 +37,6 @@ public class UserController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Read", [typeof(int)])!;
-
         if(!int.TryParse(ctx.Request.Url.Parameters["userId"], null, out int userId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -56,7 +44,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         } 
 
-        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [userId])!;
+        var result = await new UserService().GetById(userId);
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -80,18 +68,16 @@ public class UserController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Read", [typeof(string)])!;
-
         string name = ctx.Request.Url.Parameters["userName"]!;
 
-        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [name])!;
+        var result = await new UserService().GetByName(name);
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value!.Id is null) {
+        if(result.Value is null) {
             statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
             using Message<string> errMsg = new(statusId, "No Content", true, []);
             await context.Response.Send(errMsg.AsJsonString());
@@ -99,16 +85,14 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        User user = result.Value;
+        User user = result.Value[0];
 
         using Message<User> res = new(statusId, "OK", false, [ user! ]);
         await context.Response.Send(res.AsJsonString());
     }
-    public async Task GetSessionId(HttpContextBase ctx)
+    public async Task Login(HttpContextBase ctx)
     {
         short statusId;
-
-        MethodInfo method = serviceType!.GetMethod("Read", [typeof(string)])!;
 
         var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
@@ -119,15 +103,14 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        var result = await (Task<Result<List<User>, Error>>) method.Invoke(serviceInstance, [body.Value.Name])!;
-        var userSecret = Encryption.SymmetricDecryptAES256(result.Value[0].Password!, AppCommon.MasterKey);
+        var userSecret = await new UserService().GetUserCredential(body.Value.Name!);
 
-        if(!result.IsSuccessful) {
-            await HandleInternalServerError(ctx, result.Error);
+        if(!userSecret.IsSuccessful) {
+            await HandleInternalServerError(ctx, userSecret.Error);
             return;
         }
 
-        if(result.Value![0].Id is null || body.Value.Password != userSecret) {
+        if(userSecret.Value is null || userSecret.Value != body.Value.Password) {
             statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true, []);
             await context.Response.Send(errMsg.AsJsonString());
@@ -135,14 +118,12 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<string> res = new(statusId, "OK", false, [ AppCommon.GenerateSessionId(ctx.Request.Source.IpAddress) ]);
+        using Message<string> res = new(statusId, "OK", false, [ SessionManager.CreateSession(ctx.Request.Source.IpAddress).sessionId ]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Post(HttpContextBase ctx)
     {
         short statusId;
-
-        MethodInfo method = serviceType!.GetMethod("Save", [typeof(User)])!;
 
         var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
@@ -153,10 +134,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        User encryptedUser = body.Value;
-        encryptedUser.Password = Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
-
-        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [encryptedUser])!;
+        var result = await new UserService().Post(body.Value);
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -170,8 +148,6 @@ public class UserController : ControllerBase, IController<HttpContextBase>
     public async Task Put(HttpContextBase ctx)
     {
         short statusId;
-
-        MethodInfo method = serviceType!.GetMethod("Save", [typeof(User), typeof(int)])!;
 
         var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
@@ -189,9 +165,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         } 
 
-        User encryptedUser = body.Value;
-        encryptedUser.Password = Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
-        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [encryptedUser, userId])!;
+        var result = await new UserService().Put(body.Value, userId);
 
         if(result.Value!.Id is null) {
             statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
@@ -213,8 +187,6 @@ public class UserController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Delete")!;
-
         if(!int.TryParse(ctx.Request.Url.Parameters["userId"], null, out int userId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -222,7 +194,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         } 
 
-        var result = await (Task<Result<bool, Error>>) method.Invoke(serviceInstance, [userId])!;
+        var result = await new UserService().Delete(userId);
         
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);

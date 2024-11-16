@@ -1,54 +1,55 @@
-using ITCentral.Data;
+using System.Reflection;
+using ITCentral.Common;
 using ITCentral.Models;
+using ITCentral.Repository;
 using ITCentral.Types;
 
 namespace ITCentral.Service;
 
-public class UserService<T> : ServiceBase<T, User>, IService<User, int> where T : IDBCall
+public class UserService : ServiceBase, IService<User, int>
 {
-    public UserService(T db) : base(db) {}
-    public async Task<Result<List<User?>, Error>> Read()
+    public UserService() : base(typeof(UserRepository<>)) {}
+    public async Task<Result<List<User>, Error>> Get()
     {
-        var dbResult = await dbCaller.ReadFromDb<User>();
-
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-        return dbResult.Value;
+        MethodInfo method = repositoryType!.GetMethod("Read", [])!;
+        return await (Task<Result<List<User>, Error>>) method.Invoke(repositoryInstance, null)!;
     }
-    public async Task<Result<User?, Error>> Read(int id)
+    public async Task<Result<User, Error>> GetById(int id)
     {
-        var dbResult = await dbCaller.ReadFromDb<User, string, int>("Id", id);
-
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-        return dbResult.Value[0];
+        MethodInfo method = repositoryType!.GetMethod("Read", [typeof(int)])!;
+        return await (Task<Result<User, Error>>) method.Invoke(repositoryInstance, [id])!;
     }
-    public async Task<Result<List<User?>, Error>> Read(string name)
+    public async Task<Result<List<User>, Error>> GetByName(string name)
     {
-        var dbResult = await dbCaller.ReadFromDb<User, string, string>("Name", name);
-
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-        return dbResult.Value;
+        MethodInfo method = repositoryType!.GetMethod("Read", [typeof(string)])!;
+        return await (Task<Result<List<User>, Error>>) method.Invoke(repositoryInstance, [name])!;
     }
-    public async Task<Result<User?, Error>> Save(User data)
+    public async Task<Result<string, Error>> GetUserCredential(string userName)
     {
-        var dbResult = await dbCaller.Insert(data);
-
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-        return dbResult.Value;
+        MethodInfo method = repositoryType!.GetMethod("Read", [typeof(string)])!;
+        var search = await (Task<Result<List<User>, Error>>) method.Invoke(repositoryInstance, [userName])!;
+        if(!search.IsSuccessful) {
+            return search.Error;
+        }
+        return Encryption.SymmetricDecryptAES256(search.Value[0].Password ?? "", AppCommon.MasterKey);
     }
-    public async Task<Result<User?, Error>> Save(User data, int id)
+    public async Task<Result<User, Error>> Post(User user)
     {
-        var dbResult = await dbCaller.Update(data, id);
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-
-        var fetchUpdated = await Read(id);
-
-        return fetchUpdated.Value!;
+        MethodInfo method = repositoryType!.GetMethod("Save", [typeof(User)])!;
+        User encryptedUser = user;
+        Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
+        return await (Task<Result<User, Error>>) method.Invoke(repositoryInstance, [encryptedUser])!;
     }
-    public async Task<Result<bool, Error>> Delete(int id)
+    public async Task<Result<User, Error>> Put(User user, int id)
     {
-        var dbResult = await dbCaller.DeleteFromDb<User, int>(id);
-        if(!dbResult.IsSuccessful) return dbResult.Error;
-
-        return dbResult.Value;
+        MethodInfo method = repositoryType!.GetMethod("Save", [typeof(User), typeof(int)])!;
+        User encryptedUser = user;
+        Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
+        return await (Task<Result<User, Error>>) method.Invoke(repositoryInstance, [encryptedUser, id])!;
+    }
+    public async Task<Result<User, Error>> Delete(int id)
+    {
+        MethodInfo method = repositoryType!.GetMethod("Delete", [typeof(int)])!;
+        return await (Task<Result<User, Error>>) method.Invoke(repositoryInstance, [id])!;
     }
 }

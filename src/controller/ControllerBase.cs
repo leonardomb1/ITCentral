@@ -8,8 +8,6 @@ namespace ITCentral.Controller;
 
 public abstract class ControllerBase
 {
-    protected object? serviceInstance;
-    protected Type? serviceType;
     protected static HttpContextBase context = new();
     protected static short BeginRequest(
         HttpContextBase ctx, 

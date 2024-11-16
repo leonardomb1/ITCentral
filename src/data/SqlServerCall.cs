@@ -4,7 +4,7 @@ using Microsoft.Data.SqlClient;
 
 namespace ITCentral.Data;
 
-public class SqlServerCall : CallBase, IDisposable, IDBCall
+public class SqlServerCall : CallBase, IDisposable
 {
     private readonly SqlConnection connection;
     private bool disposed = false;

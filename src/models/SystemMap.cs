@@ -2,18 +2,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ITCentral.Models;
 
-[Table("USERS")]
-public class User
+[Table("SYSTEM_MAPS")]
+public class SystemMap
 {
     public int? Id {get; set;}
     public string? Name {get; set;}
-    public string? Password {get; set;}
-    public User() {}
-    public User(
+    public string? ConnectionString {get; set;}
+    public SystemMap() {}
+    public SystemMap(
         string name,
-        string password
+        string conStr
     ) {
         Name = name;
-        Password = password;
+        ConnectionString = conStr;
     }
 }

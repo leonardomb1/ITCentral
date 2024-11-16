@@ -11,5 +11,5 @@ public interface IDBCall
     public Task<Result<List<T?>, Error>> ReadFromDb<T>() where T : class;
     public Task<Result<List<T?>, Error>> ReadFromDb<T, ID, V>(ID id, V val) where T : class;
     public Task<Result<T?, Error>> Update<T, ID>(T entity, ID id);
-    public Task<Result<bool, Error>> DeleteFromDb<T, ID>(ID id);
+    public Task<Result<bool, Error>> DeleteFromDb<T, ID, V>(ID id, V val);
 }

@@ -2,40 +2,40 @@ using ITCentral.Data;
 using ITCentral.Models;
 using ITCentral.Types;
 
-namespace ITCentral.Service;
+namespace ITCentral.Repository;
 
-public class CatService<T> : ServiceBase<T, Cat>, IService<Cat, int> where T : IDBCall
+public class UserRepository<T> : RepositoryBase<T, User>, IRepository<User, int> where T : IDBCall
 {
-    public CatService(T db) : base(db) {}
-    public async Task<Result<List<Cat?>, Error>> Read()
+    public UserRepository(T db) : base(db) {}
+    public async Task<Result<List<User?>, Error>> Read()
     {
-        var dbResult = await dbCaller.ReadFromDb<Cat>();
+        var dbResult = await dbCaller.ReadFromDb<User>();
 
         if(!dbResult.IsSuccessful) return dbResult.Error;
         return dbResult.Value;
     }
-    public async Task<Result<Cat?, Error>> Read(int id)
+    public async Task<Result<User?, Error>> Read(int id)
     {
-        var dbResult = await dbCaller.ReadFromDb<Cat, string, int>("Id", id);
+        var dbResult = await dbCaller.ReadFromDb<User, string, int>("Id", id);
 
         if(!dbResult.IsSuccessful) return dbResult.Error;
         return dbResult.Value[0];
     }
-    public async Task<Result<List<Cat?>, Error>> Read(string id, string val)
+    public async Task<Result<List<User?>, Error>> Read(string name)
     {
-        var dbResult = await dbCaller.ReadFromDb<Cat, string, string>(id, val);
+        var dbResult = await dbCaller.ReadFromDb<User, string, string>("Name", name);
 
         if(!dbResult.IsSuccessful) return dbResult.Error;
         return dbResult.Value;
     }
-    public async Task<Result<Cat?, Error>> Save(Cat data)
+    public async Task<Result<User?, Error>> Save(User data)
     {
         var dbResult = await dbCaller.Insert(data);
 
         if(!dbResult.IsSuccessful) return dbResult.Error;
         return dbResult.Value;
     }
-    public async Task<Result<Cat?, Error>> Save(Cat data, int id)
+    public async Task<Result<User?, Error>> Save(User data, int id)
     {
         var dbResult = await dbCaller.Update(data, id);
         if(!dbResult.IsSuccessful) return dbResult.Error;
@@ -46,7 +46,7 @@ public class CatService<T> : ServiceBase<T, Cat>, IService<Cat, int> where T : I
     }
     public async Task<Result<bool, Error>> Delete(int id)
     {
-        var dbResult = await dbCaller.DeleteFromDb<Cat, int>(id);
+        var dbResult = await dbCaller.DeleteFromDb<User, string, int>("Id", id);
         if(!dbResult.IsSuccessful) return dbResult.Error;
 
         return dbResult.Value;
