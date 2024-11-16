@@ -19,6 +19,7 @@ public static class AppCommon
     public static bool Ssl {get; private set;}
     public static string HostName {get; private set;} = "";
     public static string DbType {get; private set;} = "";
+    public static string MasterKey {get; private set;} = "";
     public static IDBCall GenerateCallerInstance()
     {
         return DbType switch
@@ -38,8 +39,30 @@ public static class AppCommon
             "   -v --version   Show version information\n" +
             "   -e --environment    [Options]  Use configuration variables\n\n" +
             "   [Options]: \n" +
-            "   Port, DbType, ConnectionString, SSL, Host"
+            "   Port, DbType, ConnectionString, SSL, Host, Logging, LogTime, LogPath"
             );
+    }
+
+    public static string GenerateSessionId(string seed)
+    {
+        return Encryption.Sha256($"{seed}{DateTime.Now:yyyy-MM-dd HH:mm}{DateTime.Now.AddMinutes(30):yyyy-MM-dd HH:mm}");
+    }
+
+    public static bool ValidateSessionId(string seed, string token)
+    {
+        string[] parts = token.Split([seed], StringSplitOptions.None);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        string expirationTimeString = parts[1][^16..];
+        if (DateTime.TryParseExact(expirationTimeString, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out DateTime expirationTime))
+        {
+            return DateTime.Now < expirationTime;
+        }
+
+        return false;
     }
 
     public static void ShowVersion() 
@@ -57,9 +80,9 @@ public static class AppCommon
 
     public static void InitializeFromArgs(string[] args)
     {
-        if (args.Length < 5)
+        if (args.Length < 9)
         {
-            throw new ArgumentException("Insufficient arguments provided. Expected 5 arguments.");
+            throw new ArgumentException("Insufficient arguments provided.");
         }
 
         if (!int.TryParse(args[1], out int port))
@@ -85,7 +108,8 @@ public static class AppCommon
         string db = args[2];
         string conn = args[3];
         string hostName = args[5];
-        string logPath = args[9];
+        string logPath = args[8];
+        string key = args[9];
 
         PortNumber = port;
         DbType = db;
@@ -95,6 +119,7 @@ public static class AppCommon
         Logging = logging;
         LogFilePath = logPath;
         LogDumpTime = TimeSpan.FromSeconds(logTime);
+        MasterKey = key;
     }
 
     public static void InitializeFromEnv()
@@ -109,6 +134,7 @@ public static class AppCommon
             { "LOGGING", nameof(HostName) },
             { "LOG_FILE_PATH", nameof(LogFilePath) },
             { "LOG_DUMP_TIME", nameof(LogDumpTime) },
+            { "ENCRYPT_KEY", nameof(MasterKey) },
         };
 
         Dictionary<string, string?> config = envs.ToDictionary(

@@ -1,4 +1,5 @@
 using System.Net;
+using ITCentral.Common;
 using ITCentral.Models;
 using WatsonWebserver.Core;
 
@@ -12,11 +13,29 @@ public class GenericController : ControllerBase
         using Message<string> res = new(statusId, "Not Found", true);
         await context.Response.Send(res.AsJsonString());
     }
-
-    public static async Task Test(HttpContextBase ctx)
+    public static async Task Authenticate(HttpContextBase ctx)
     {
-        short statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<string> res = new(statusId, "Test", false);
-        await context.Response.Send(res.AsJsonString());
+        if(ctx.Request.Url.RawWithoutQuery == "/api/users/login") return;
+        if(!ctx.Request.HeaderExists("Authorization"))
+        {
+            short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;
+        }
+
+        string sessionId = ctx.Request.Headers.Get("Authorization")!;
+
+        if(AppCommon.ValidateSessionId(ctx.Request.Source.IpAddress, sessionId))
+        {
+            short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;
+        }
+    }
+    public static async Task ErrorDefaultRoute(HttpContextBase ctx, Exception ex)
+    {
+        await HandleInternalServerError(ctx, new Error(ex.Message, ex.StackTrace, false));
     }
 }

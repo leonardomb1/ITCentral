@@ -2,7 +2,6 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using ITCentral.Common;
 using ITCentral.Models;
-using ITCentral.Types;
 using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;

@@ -22,7 +22,6 @@ public abstract class CallBase : IDBCall
         using var command = CreateDbCommand(query);
         return await command.ExecuteScalarAsync();
     }
-
     public async Task<Result<bool, Error>> CreateTable<T>()
     {
         var tableName = GetTableName(typeof(T));
@@ -76,7 +75,6 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     public async Task<Result<bool, Error>> SyncLookup<T>()
     {
         var tableName = GetTableName(typeof(T));
@@ -92,7 +90,6 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     public async Task<Result<List<T?>, Error>> ReadFromDb<T>() where T : class
     {
         var tableName = GetTableName(typeof(T));
@@ -138,21 +135,21 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
-    public async Task<Result<T?, Error>> ReadFromDb<T, ID>(ID id) where T : class
+    public async Task<Result<List<T?>, Error>> ReadFromDb<T, ID, V>(ID id, V val) where T : class
     {
         var tableName = GetTableName(typeof(T));
-        string query = $"SELECT * FROM {tableName} WHERE Id = @tableId";
+        string query = $"SELECT * FROM {tableName} WHERE {id} = @tableId";
 
         try
         {
             using var command = CreateDbCommand(query);
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tableId";
-            parameter.Value = id;
+            parameter.Value = val;
             command.Parameters.Add(parameter);
 
             using var reader = await command.ExecuteReaderAsync();
+            var results = new List<T?>();
             
             T? obj = Activator.CreateInstance(typeof(T), true) as T;
 
@@ -177,16 +174,16 @@ public abstract class CallBase : IDBCall
                         }
                     }
                 }
+                results.Add(obj);
             }
             
-            return obj;
+            return results;
         } 
         catch (Exception ex) 
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     public async Task<Result<T, Error>> Insert<T>(T entity)
     {
         var tableName = GetTableName(typeof(T));
@@ -218,7 +215,6 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     public async Task<Result<T?, Error>> Update<T, ID>(T entity, ID id)
     {
         var tableName = GetTableName(typeof(T));
@@ -254,7 +250,6 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     public async Task<Result<bool, Error>> DeleteFromDb<T, ID>(ID id)
     {
         var tableName = GetTableName(typeof(T));
@@ -278,7 +273,6 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-
     private static string GetTableName(Type type)
     {
         var tableAttribute = type

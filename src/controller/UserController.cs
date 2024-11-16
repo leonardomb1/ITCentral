@@ -8,13 +8,13 @@ using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
-public class CatController : ControllerBase, IController<HttpContextBase>
+public class UserController : ControllerBase, IController<HttpContextBase>
 {
-    public CatController()
+    public UserController()
     {
         var callerInstance = AppCommon.GenerateCallerInstance();
         Type instanceType = callerInstance.GetType();
-        serviceType = typeof(CatService<>).MakeGenericType(instanceType);
+        serviceType = typeof(UserService<>).MakeGenericType(instanceType);
 
         serviceInstance = Activator.CreateInstance(serviceType!, callerInstance);
     }
@@ -23,7 +23,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         short statusId;
 
         MethodInfo method = serviceType!.GetMethod("Read", [])!;
-        var result = await (Task<Result<List<Cat>, Error>>) method.Invoke(serviceInstance, null)!;
+        var result = await (Task<Result<List<User>, Error>>) method.Invoke(serviceInstance, null)!;
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -38,7 +38,9 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Cat> res = new(statusId, "OK", false, [..result.Value!]);
+        List<User?> users = result.Value!;
+
+        using Message<User> res = new(statusId, "OK", false, [..users!]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task GetById(HttpContextBase ctx)
@@ -47,14 +49,14 @@ public class CatController : ControllerBase, IController<HttpContextBase>
 
         MethodInfo method = serviceType!.GetMethod("Read", [typeof(int)])!;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["catId"], null, out int catId)) {
+        if(!int.TryParse(ctx.Request.Url.Parameters["userId"], null, out int userId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         } 
 
-        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [catId])!;
+        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [userId])!;
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -69,26 +71,27 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Cat> res = new(statusId, "OK", false, [ result.Value! ]);
+        User user = result.Value;
+
+        using Message<User> res = new(statusId, "OK", false, [ user! ]);
         await context.Response.Send(res.AsJsonString());
     }
-    public async Task GetByQuery(HttpContextBase ctx)
+    public async Task GetByName(HttpContextBase ctx)
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Read", [typeof(string), typeof(string)])!;
+        MethodInfo method = serviceType!.GetMethod("Read", [typeof(string)])!;
 
-        string param = ctx.Request.Url.Parameters["param"]!;
-        string val = ctx.Request.Url.Parameters["paramValue"]!;
+        string name = ctx.Request.Url.Parameters["userName"]!;
 
-        var result = await (Task<Result<List<Cat>, Error>>) method.Invoke(serviceInstance, [param, val])!;
+        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [name])!;
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value is null) {
+        if(result.Value!.Id is null) {
             statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
             using Message<string> errMsg = new(statusId, "No Content", true, []);
             await context.Response.Send(errMsg.AsJsonString());
@@ -96,17 +99,18 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        User user = result.Value;
 
-        using Message<Cat> res = new(statusId, "OK", false, [ .. result.Value! ]);
+        using Message<User> res = new(statusId, "OK", false, [ user! ]);
         await context.Response.Send(res.AsJsonString());
     }
-    public async Task Post(HttpContextBase ctx)
+    public async Task GetSessionId(HttpContextBase ctx)
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Save", [typeof(Cat)])!;
+        MethodInfo method = serviceType!.GetMethod("Read", [typeof(string)])!;
 
-        var body = Converter.TryDeserializeJson<Cat>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
         if(!body.IsSuccessful) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
@@ -115,8 +119,44 @@ public class CatController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        Cat cat = body.Value;
-        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [cat])!;
+        var result = await (Task<Result<List<User>, Error>>) method.Invoke(serviceInstance, [body.Value.Name])!;
+        var userSecret = Encryption.SymmetricDecryptAES256(result.Value[0].Password!, AppCommon.MasterKey);
+
+        if(!result.IsSuccessful) {
+            await HandleInternalServerError(ctx, result.Error);
+            return;
+        }
+
+        if(result.Value![0].Id is null || body.Value.Password != userSecret) {
+            statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true, []);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;           
+        }
+
+        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        using Message<string> res = new(statusId, "OK", false, [ AppCommon.GenerateSessionId(ctx.Request.Source.IpAddress) ]);
+        await context.Response.Send(res.AsJsonString());
+    }
+    public async Task Post(HttpContextBase ctx)
+    {
+        short statusId;
+
+        MethodInfo method = serviceType!.GetMethod("Save", [typeof(User)])!;
+
+        var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
+
+        if(!body.IsSuccessful) {
+            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            using Message<string> errMsg = new(statusId, "Bad Request", true);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;
+        }
+
+        User encryptedUser = body.Value;
+        encryptedUser.Password = Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
+
+        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [encryptedUser])!;
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -124,16 +164,16 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.Created);
-        using Message<Cat> res = new(statusId, "Created", false, [ result.Value! ]);
+        using Message<User> res = new(statusId, "Created", false, [ result.Value ]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Put(HttpContextBase ctx)
     {
         short statusId;
 
-        MethodInfo method = serviceType!.GetMethod("Save", [typeof(Cat), typeof(int)])!;
+        MethodInfo method = serviceType!.GetMethod("Save", [typeof(User), typeof(int)])!;
 
-        var body = Converter.TryDeserializeJson<Cat>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
         if(!body.IsSuccessful) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
@@ -142,15 +182,16 @@ public class CatController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["catId"], null, out int catId)) {
+        if(!int.TryParse(ctx.Request.Url.Parameters["userId"], null, out int userId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         } 
 
-        Cat cat = body.Value;
-        var result = await (Task<Result<Cat, Error>>) method.Invoke(serviceInstance, [cat, catId])!;
+        User encryptedUser = body.Value;
+        encryptedUser.Password = Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
+        var result = await (Task<Result<User, Error>>) method.Invoke(serviceInstance, [encryptedUser, userId])!;
 
         if(result.Value!.Id is null) {
             statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
@@ -165,7 +206,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Cat> res = new(statusId, "OK", false, [ result.Value! ]);
+        using Message<User> res = new(statusId, "OK", false, [ result.Value ]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Delete(HttpContextBase ctx)
@@ -174,14 +215,14 @@ public class CatController : ControllerBase, IController<HttpContextBase>
 
         MethodInfo method = serviceType!.GetMethod("Delete")!;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["catId"], null, out int catId)) {
+        if(!int.TryParse(ctx.Request.Url.Parameters["userId"], null, out int userId)) {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         } 
 
-        var result = await (Task<Result<bool, Error>>) method.Invoke(serviceInstance, [catId])!;
+        var result = await (Task<Result<bool, Error>>) method.Invoke(serviceInstance, [userId])!;
         
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -189,7 +230,7 @@ public class CatController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Cat> res = new(statusId, "OK", false);
+        using Message<User> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 }
