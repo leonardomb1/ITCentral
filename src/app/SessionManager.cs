@@ -11,7 +11,7 @@ public static class SessionManager
         string seed = $"{ip}:{DateTime.UtcNow.Ticks}:{randomComponent}";
 
         string sessionId = Encryption.Sha256(seed);
-        DateTime expiration = DateTime.UtcNow.Add(AppCommon.SessionTime);
+        DateTime expiration = DateTime.UtcNow.AddSeconds(AppCommon.SessionTime);
 
         _ = new SessionService().Create(sessionId, expiration);
 

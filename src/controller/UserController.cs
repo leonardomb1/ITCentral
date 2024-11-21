@@ -21,16 +21,15 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         if(result.Value is null) {
-            statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
-            using Message<string> errMsg = new(statusId, "No Content", true, []);
+            statusId = BeginRequest(ctx, HttpStatusCode.OK);
+            using Message<string> errMsg = new(statusId, "No Result", false);
             await context.Response.Send(errMsg.AsJsonString());
             return;           
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        List<User?> users = result.Value!;
 
-        using Message<User> res = new(statusId, "OK", false, [..users!]);
+        using Message<List<User>> res = new(statusId, "OK", false, [result.Value]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task GetById(HttpContextBase ctx)
@@ -51,10 +50,10 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if(result.Value!.Id is null) {
-            statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
-            using Message<string> errMsg = new(statusId, "No Content", true, []);
-            await context.Response.Send(errMsg.AsJsonString());
+        if(result.Value is null) {
+            statusId = BeginRequest(ctx, HttpStatusCode.OK);
+            using Message<string> msg = new(statusId, "No Result", false);
+            await context.Response.Send(msg.AsJsonString());
             return;           
         }
 
@@ -77,17 +76,16 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if(result.Value is null) {
-            statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
-            using Message<string> errMsg = new(statusId, "No Content", true, []);
-            await context.Response.Send(errMsg.AsJsonString());
+        if(result.Value.Count == 0) {
+            statusId = BeginRequest(ctx, HttpStatusCode.OK);
+            using Message<string> msg = new(statusId, "No Result", false);
+            await context.Response.Send(msg.AsJsonString());
             return;           
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        User user = result.Value[0];
 
-        using Message<User> res = new(statusId, "OK", false, [ user! ]);
+        using Message<User> res = new(statusId, "OK", false, [.. result.Value]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Login(HttpContextBase ctx)
@@ -96,7 +94,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
 
         var body = Converter.TryDeserializeJson<User>(ctx.Request.DataAsString);
 
-        if(!body.IsSuccessful) {
+        if(!body.IsSuccessful || body.Value.Name == "" || body.Value.Password == "") {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
@@ -110,9 +108,9 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if(userSecret.Value is null || userSecret.Value != body.Value.Password) {
+        if(userSecret.Value is null || userSecret.Value == "" || userSecret.Value != body.Value.Password) {
             statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
-            using Message<string> errMsg = new(statusId, "Unauthorized", true, []);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;           
         }
@@ -134,7 +132,9 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        var result = await new UserService().Post(body.Value);
+        var encryptedUser = body.Value;
+        encryptedUser.Password = Encryption.SymmetricEncryptAES256(body.Value.Password ?? "", AppCommon.MasterKey);
+        var result = await new UserService().Post(encryptedUser);
 
         if(!result.IsSuccessful) {
             await HandleInternalServerError(ctx, result.Error);
@@ -167,10 +167,9 @@ public class UserController : ControllerBase, IController<HttpContextBase>
 
         var result = await new UserService().Put(body.Value, userId);
 
-        if(result.Value!.Id is null) {
-            statusId = BeginRequest(ctx, HttpStatusCode.NoContent);
-            using Message<string> errMsg = new(statusId, "No Content", true, []);
-            await context.Response.Send(errMsg.AsJsonString());
+        if(result.Value is null) {
+            _ = BeginRequest(ctx, HttpStatusCode.NoContent);
+            await context.Response.Send("");
             return;           
         }
         

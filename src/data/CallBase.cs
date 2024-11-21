@@ -41,7 +41,6 @@ public abstract class CallBase : IDBCall
                 propType = Nullable.GetUnderlyingType(propType);
             }
 
-
             var sqlType = GetSqlType(propType!);
             
             queryBuilder.Append($"    [{columnName}] {sqlType}");

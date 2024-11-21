@@ -1,6 +1,5 @@
 namespace ITCentral.Common;
 using System.Reflection;
-using ITCentral.Data;
 
 public static class AppCommon
 {
@@ -12,8 +11,8 @@ public static class AppCommon
     public const string MessageRequest = "REQUEST";
     public const string MessageError = "ERROR";
     public static string LogFilePath {get; private set;} = "";
-    public static TimeSpan LogDumpTime {get; private set;}
-    public static TimeSpan SessionTime {get; private set;}
+    public static int LogDumpTime {get; private set;}
+    public static int SessionTime {get; private set;}
     public static bool Logging {get; private set;}
     public static int PortNumber {get; private set;}
     public static string ConnectionString {get; private set;} = "";
@@ -22,15 +21,21 @@ public static class AppCommon
     public static string DbType {get; private set;} = "";
     public static string MasterKey {get; private set;} = "";
     public static string ApiKey {get; private set;} = "";
-    public static IDBCall GenerateCallerInstance()
+
+    private static readonly Dictionary<string, string> keyMap = new()
     {
-        return DbType switch
-        {
-            _ when DbType == "MSSQL" => new SqlServerCall(ConnectionString),
-            _ when DbType == "SQLite" => new SqlLiteCall(ConnectionString),
-            _ => throw new Exception("Database not supported.")
-        };
-    }
+        { "PORT_NUMBER", nameof(PortNumber) },
+        { "DB_TYPE", nameof(DbType) },
+        { "CONNECTION_STRING", nameof(ConnectionString) },
+        { "SSL_ENABLED", nameof(Ssl) },
+        { "HOST_NAME", nameof(HostName) },
+        { "ENABLE_LOG_DUMP", nameof(Logging) },
+        { "LOG_DUMP_TIME", nameof(LogDumpTime) },
+        { "LOG_FILE_PATH", nameof(LogFilePath) },
+        { "ENCRYPT_KEY", nameof(MasterKey) },
+        { "SESSION_TIME", nameof(SessionTime) },
+        { "API_KEY", nameof(ApiKey) },
+    };
     public static void ShowHelp() 
     {
         ShowSignature();
@@ -60,74 +65,24 @@ public static class AppCommon
 
     public static void InitializeFromArgs(string[] args)
     {
-        if (args.Length < 9)
-        {
-            throw new ArgumentException("Insufficient arguments provided.");
-        }
+        var values = args.Skip(1);
 
-        if (!int.TryParse(args[1], out int port))
-        {
-            throw new ArgumentException("Port value must be an integer.");
-        }
+        for(int i = 0; i < values.Count(); i++) {
+            var key = keyMap.ElementAt(i).Value;
+            var propertyInfo = typeof(AppCommon).GetProperty(key, BindingFlags.Public | BindingFlags.Static);
 
-        if (!bool.TryParse(args[4], out bool ssl))
-        {
-            throw new ArgumentException("SSL value must be a boolean.");
-        }
-
-        if (!bool.TryParse(args[6], out bool logging))
-        {
-            throw new ArgumentException("Logging value must be a boolean.");
-        }
-
-        if (!int.TryParse(args[7], out int logTime))
-        {
-            throw new ArgumentException("Log Time value must be an integer.");
-        }
-
-        if (!int.TryParse(args[10], out int sessionTime))
-        {
-            throw new ArgumentException("Session Time value must be an integer.");
-        }
-
-        string db = args[2];
-        string conn = args[3];
-        string hostName = args[5];
-        string logPath = args[8];
-        string masterKey = args[9];
-        string apiKey = args[11];
-
-        PortNumber = port;
-        DbType = db;
-        ConnectionString = conn;
-        HostName = hostName;
-        Ssl = ssl;
-        Logging = logging;
-        LogFilePath = logPath;
-        LogDumpTime = TimeSpan.FromSeconds(logTime);
-        MasterKey = masterKey;
-        SessionTime = TimeSpan.FromSeconds(sessionTime);
-        ApiKey = apiKey;
+            if(propertyInfo != null && propertyInfo.CanWrite)
+            {
+                var val = values.ElementAt(i);
+                var convert = Convert.ChangeType(val, propertyInfo.PropertyType);
+                propertyInfo.SetValue(null, convert);
+            }
+        }  
     }
 
     public static void InitializeFromEnv()
     {
-        var envs = new Dictionary<string, string>
-        {
-            { "PORT_NUMBER", nameof(PortNumber) },
-            { "DB_TYPE", nameof(DbType) },
-            { "CONNECTION_STRING", nameof(ConnectionString) },
-            { "SSL_ENABLED", nameof(Ssl) },
-            { "HOST_NAME", nameof(HostName) },
-            { "ENABLE_LOG_DUMP", nameof(HostName) },
-            { "LOG_FILE_PATH", nameof(LogFilePath) },
-            { "LOG_DUMP_TIME", nameof(LogDumpTime) },
-            { "ENCRYPT_KEY", nameof(MasterKey) },
-            { "SESSION_TIME", nameof(MasterKey) },
-            { "API_KEY", nameof(ApiKey) },
-        };
-
-        Dictionary<string, string?> config = envs.ToDictionary(
+        Dictionary<string, string?> config = keyMap.ToDictionary(
             env => env.Key,
             env => Environment.GetEnvironmentVariable(env.Key)
         );
@@ -136,7 +91,7 @@ public static class AppCommon
             throw new Exception("Environment variable not configured!");
         }
 
-        foreach (var env in envs)
+        foreach (var env in keyMap)
         {
             var propertyInfo = typeof(AppCommon).GetProperty(env.Value, BindingFlags.Public | BindingFlags.Static);
             if (propertyInfo != null && propertyInfo.CanWrite)

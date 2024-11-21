@@ -3,6 +3,7 @@ using ITCentral.Controller;
 using WatsonWebserver;
 using WatsonWebserver.Core;
 using WebMethod = WatsonWebserver.Core.HttpMethod;
+using static ITCentral.Controller.GenericController;
 
 namespace ITCentral.Router;
 
@@ -13,21 +14,28 @@ internal class Server
     {
         service = new Webserver(
             new WebserverSettings(AppCommon.HostName, AppCommon.PortNumber, AppCommon.Ssl),
-            GenericController.NotFound
+            NotFound
         );
+
+        // Default routing managers
+        var postAuth = service.Routes.PostAuthentication;
+        var preAuth = service.Routes.PreAuthentication;
+
+        string root = "/api";
 
         // User model routes
         var userController = new UserController();
-        service.Routes.PreAuthentication.Static.Add(WebMethod.POST, "/api/users/login", userController.Login, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Static.Add(WebMethod.GET, "/api/users", userController.Get, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Static.Add(WebMethod.POST, "/api/users", userController.Post, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Parameter.Add(WebMethod.GET, "/api/users/id/{userId}", userController.GetById, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Parameter.Add(WebMethod.GET, "/api/users/name/{userName}", userController.GetByName, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Parameter.Add(WebMethod.PUT, "/api/users/{userId}", userController.Put, GenericController.ErrorDefaultRoute);
-        service.Routes.PostAuthentication.Parameter.Add(WebMethod.DELETE, "/api/users/{userId}", userController.Delete, GenericController.ErrorDefaultRoute);        
+        string users = root+"/users";
+        preAuth.Static.Add(WebMethod.POST, users+"/login", userController.Login, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.GET, users, userController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, users, userController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, users+"/id/{userId}", userController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, users+"/name/{userName}", userController.GetByName, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, users+"/id/{userId}", userController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, users+"/id/{userId}", userController.Delete, ErrorDefaultRoute);        
         
         // Authentication
-        service.Routes.AuthenticateRequest = GenericController.Authenticate;
+        service.Routes.AuthenticateRequest = Authenticate;
     }
 
     public void Run()
