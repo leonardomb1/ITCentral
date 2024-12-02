@@ -1,0 +1,22 @@
+@url = http://127.0.0.1:10000/api
+@users = /users
+
+#@name UsersList
+GET {{url}}{{users}}
+Key: ABC123
+
+#@name UserCreate
+POST {{url}}{{users}}
+Key: ABC123
+{
+    "Name": "leo",
+    "Password": "leo123"
+}
+
+#@name Login
+POST {{url}}{{users}}/login
+Key: ABC123
+{
+    "Name": "leo",
+    "Password": "leo123"
+}

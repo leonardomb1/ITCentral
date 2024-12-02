@@ -134,7 +134,7 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    public async Task<Result<List<T?>, Error>> ReadFromDb<T, ID, V>(ID id, V val) where T : class
+    public async Task<Result<List<T?>, Error>> ReadFromDb<T, V>(string id, V val) where T : class
     {
         var tableName = GetTableName(typeof(T));
         string query = $"SELECT * FROM {tableName} WHERE {id} = @tableId";
@@ -214,16 +214,16 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    public async Task<Result<T?, Error>> Update<T, ID>(T entity, ID id)
+    public async Task<Result<T?, Error>> Update<T, V>(string id, T entity, V val)
     {
         var tableName = GetTableName(typeof(T));
         var properties = typeof(T)
             .GetProperties()
-            .Where(p => p.Name != "Id");
+            .Where(p => p.Name != id);
 
         var mapping = string.Join(", ", properties.Select(p => $"[{p.Name}] = @{p.Name}"));
 
-        var query = $"UPDATE {tableName} SET {mapping} WHERE Id = @tableId";
+        var query = $"UPDATE {tableName} SET {mapping} WHERE {id} = @tableId";
         
         try
         {
@@ -249,7 +249,7 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    public async Task<Result<bool, Error>> DeleteFromDb<T, ID, V>(ID id, V val)
+    public async Task<Result<bool, Error>> DeleteFromDb<T, V>(string id, V val)
     {
         var tableName = GetTableName(typeof(T));
 
@@ -272,6 +272,29 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
+    public async Task<Result<bool, Error>> CheckRecord<T, V>(string id, V val)
+    {
+        var tableName = GetTableName(typeof(T));
+
+        var query = $"SELECT 1 FROM {tableName} WHERE {id} = @tableId";
+
+        try
+        {
+            using var command = CreateDbCommand(query);
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@tableId";
+            parameter.Value = val;
+            command.Parameters.Add(parameter);
+
+            var result = await command.ExecuteScalarAsync();
+
+            return result != null;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }    
     private static string GetTableName(Type type)
     {
         var tableAttribute = type

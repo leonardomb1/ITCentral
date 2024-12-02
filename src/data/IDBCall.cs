@@ -9,7 +9,8 @@ public interface IDBCall
     public Task<Result<bool, Error>> SyncLookup<T>();
     public Task<Result<T, Error>> Insert<T>(T entity);
     public Task<Result<List<T?>, Error>> ReadFromDb<T>() where T : class;
-    public Task<Result<List<T?>, Error>> ReadFromDb<T, ID, V>(ID id, V val) where T : class;
-    public Task<Result<T?, Error>> Update<T, ID>(T entity, ID id);
-    public Task<Result<bool, Error>> DeleteFromDb<T, ID, V>(ID id, V val);
+    public Task<Result<List<T?>, Error>> ReadFromDb<T, V>(string id, V val) where T : class;
+    public Task<Result<T?, Error>> Update<T, V>(string id, T entity, V val);
+    public Task<Result<bool, Error>> DeleteFromDb<T, V>(string id, V val);
+    public Task<Result<bool, Error>> CheckRecord<T, V>(string id, V val);
 }

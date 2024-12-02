@@ -9,6 +9,7 @@ namespace ITCentral.Router;
 
 internal class Server
 {
+    private readonly ManualResetEvent shutdownEvent = new(false);
     private readonly Webserver service;
     protected internal Server()
     {
@@ -34,6 +35,15 @@ internal class Server
         postAuth.Parameter.Add(WebMethod.PUT, users+"/id/{userId}", userController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, users+"/id/{userId}", userController.Delete, ErrorDefaultRoute);        
         
+        // SystemMap model routes
+        var systemMapController = new SystemMapController();
+        string system = root+"/system";
+        postAuth.Static.Add(WebMethod.GET, system, systemMapController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, system, systemMapController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, system+"/id/{systemId}", systemMapController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, system+"/id/{systemId}", systemMapController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, system+"/id/{systemId}", systemMapController.Delete, ErrorDefaultRoute);        
+
         // Authentication
         service.Routes.AuthenticateRequest = Authenticate;
     }
@@ -42,7 +52,8 @@ internal class Server
     {
         service.Start();
         Log.Out($"Service is running at port: {AppCommon.PortNumber}");
-        Console.ReadLine();
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => shutdownEvent.Set(); 
+        shutdownEvent.WaitOne();
     }
 
     ~Server()

@@ -1,0 +1,25 @@
+services:
+  ITCentral:
+    image: itcentral:0.0.1
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    env_file:
+      - .env
+    environment:
+      PORT_NUMBER: ${PORT_NUMBER}
+      DB_TYPE: ${DB_TYPE}
+      CONNECTION_STRING: ${CONNECTION_STRING}
+      SSL_ENABLED: ${SSL_ENABLED}
+      HOST_NAME: ${HOST_NAME}
+      ENABLE_LOG_DUMP: ${ENABLE_LOG_DUMP}
+      LOG_DUMP_TIME: ${LOG_DUMP_TIME}
+      LOG_FILE_PATH: ${LOG_FILE_PATH}
+      ENCRYPT_KEY: ${ENCRYPT_KEY}
+      SESSION_TIME: ${SESSION_TIME}
+      API_KEY: ${API_KEY}
+    ports:
+      - "${PORT_NUMBER}:${PORT_NUMBER}"
+    volumes:
+      - ~/containers/itcentral/db:/app/db
+      - ~/containers/itcentral/log:/app/log

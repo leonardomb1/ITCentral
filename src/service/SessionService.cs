@@ -1,7 +1,6 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
-using Microsoft.EntityFrameworkCore;
 
 namespace ITCentral.Service;
 
@@ -10,44 +9,31 @@ public class SessionService : ServiceBase<Session>
     public SessionService() : base() {}
     public async Task<Result<Session?, Error>> GetSession(string sessionId)
     {
-        try
-        {
-            var session = await Repository.FirstOrDefaultAsync(x => x.SessionId == sessionId);
-            return session;
+        var session = await Repository.ReadFromDb<Session, string>("SessionId", sessionId);
+        if(!session.IsSuccessful) {
+            return session.Error;
         }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
+
+        return session.Value.FirstOrDefault();
     }
 
     public async Task<Result<bool, Error>> Create(string sessionId, DateTime expiration)
     {
-        var session = new Session(sessionId, expiration);
-        try
-        {
-            await Repository.AddAsync(session);
-            await SaveChangesAsync();
-            return AppCommon.Success;
+        var insert = await Repository.Insert(new Session(sessionId, expiration));
+        if(!insert.IsSuccessful) {
+            return insert.Error;
         }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
+        
+        return AppCommon.Success;
     }
 
     public async Task<Result<bool, Error>> Delete(string sessionId)
     {
-        try
-        {
-            var session = await Repository.FirstOrDefaultAsync(x => x.SessionId == sessionId);
-            Repository.Remove(session!);
-            await SaveChangesAsync();
-            return AppCommon.Success;
+        var delete = await Repository.DeleteFromDb<Session, string>("SessionId", sessionId);
+        if(!delete.IsSuccessful) {
+            return delete.Error;
         }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    } 
+
+        return delete.Value;
+    }
 }

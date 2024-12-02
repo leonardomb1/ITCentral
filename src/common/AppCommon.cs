@@ -1,6 +1,7 @@
 namespace ITCentral.Common;
 using System.Reflection;
-
+using ITCentral.Data;
+using YamlDotNet.RepresentationModel;
 public static class AppCommon
 {
     public const bool Success = true;
@@ -21,6 +22,16 @@ public static class AppCommon
     public static string DbType {get; private set;} = "";
     public static string MasterKey {get; private set;} = "";
     public static string ApiKey {get; private set;} = "";
+
+    public static IDBCall DbConfig()
+    {
+        return DbType switch
+        {
+            "SqlServer" => new SqlServerCall(ConnectionString),
+            "Sqlite" => new SqlLiteCall(ConnectionString),
+            _ => throw new Exception("Unsupported database type")
+        };
+    }
 
     private static readonly Dictionary<string, string> keyMap = new()
     {
@@ -96,7 +107,39 @@ public static class AppCommon
             var propertyInfo = typeof(AppCommon).GetProperty(env.Value, BindingFlags.Public | BindingFlags.Static);
             if (propertyInfo != null && propertyInfo.CanWrite)
             {
-                propertyInfo.SetValue(null, config[env.Key]);
+                var value = Convert.ChangeType(config[env.Key], propertyInfo.PropertyType);
+                propertyInfo.SetValue(null, value);
+            }
+        }
+    }
+
+    public static void InitializeFromYaml(string yamlFilePath)
+    {
+        if (!File.Exists(yamlFilePath))
+        {
+            throw new FileNotFoundException($"Configuration file not found: {yamlFilePath}");
+        }
+
+        var yamlContent = File.ReadAllText(yamlFilePath);
+        var yaml = new YamlStream();
+        yaml.Load(new StringReader(yamlContent));
+
+        var root = (YamlMappingNode)yaml.Documents[0].RootNode;
+
+        foreach (var env in keyMap)
+        {
+            var key = env.Key;
+            var propertyName = env.Value;
+            var propertyInfo = typeof(AppCommon).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static);
+
+            if (propertyInfo != null && propertyInfo.CanWrite)
+            {
+                if (root.Children.TryGetValue(new YamlScalarNode(key), out var valueNode))
+                {
+                    var value = valueNode.ToString();
+                    var convertedValue = Convert.ChangeType(value, propertyInfo.PropertyType);
+                    propertyInfo.SetValue(null, convertedValue);
+                }
             }
         }
     }

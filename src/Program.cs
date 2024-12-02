@@ -4,7 +4,7 @@ using ITCentral.Router;
 namespace ITCentral;
 
 public class Program
-{
+{   
     public static void Main(string[] args)
     {
         if (args.Contains("--help") || args.Contains("-h")) {
@@ -17,21 +17,15 @@ public class Program
             return;
         }
 
-        bool isCmd = 
-                    args.Contains("--environment") || 
-                    args.Contains("-e") || 
-                    args.Length > 0;
-
-        Run(isCmd, args);
-    }
-
-    private static void Run(bool isCmd, string[] args)
-    {
-        if(!isCmd) {
-            AppCommon.InitializeFromEnv();
-        } else {
-            AppCommon.InitializeFromArgs(args);
-        }
+        Action switcher = args.FirstOrDefault() switch {
+            string o when o == "-e" => AppCommon.InitializeFromEnv,
+            string o when o == "-f" => () => AppCommon.InitializeFromYaml(args.ElementAt(1)),
+            string o when o == "-c" => () => AppCommon.InitializeFromArgs([ .. args.Skip(1) ]),
+            null => AppCommon.InitializeFromEnv,
+            _ => () => throw new Exception("Not Supported")
+        };
+        
+        switcher.Invoke();
 
         Server server = new();
         server.Run();

@@ -11,7 +11,7 @@ public class GenericController : ControllerBase
     public static async Task NotFound(HttpContextBase ctx)
     {
         short statusId = BeginRequest(ctx, HttpStatusCode.NotFound);
-        using Message<string> res = new(statusId, "Not Found", true);
+        using Message<string> res = new(statusId, "Not Found", true, null!);
         await context.Response.Send(res.AsJsonString());
     }
     public static async Task Authenticate(HttpContextBase ctx)
@@ -24,7 +24,7 @@ public class GenericController : ControllerBase
         if(!ctx.Request.HeaderExists("Authorization"))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
-            using Message<string> errMsg = new(statusId, "Unauthorized", true);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true, null!);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
@@ -34,7 +34,7 @@ public class GenericController : ControllerBase
         if(!SessionManager.IsSessionValid(sessionId))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
-            using Message<string> errMsg = new(statusId, "Unauthorized", true);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true, null!);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }

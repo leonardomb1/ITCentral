@@ -9,20 +9,19 @@ public class Extraction
     public string? Name {get; set;}
     public int? ScheduleId {get; set;}
     public int? SystemId {get; set;}
-    public int? OptionsId {get; set;}
+    public string? FilterColumn {get; set;}
+    public int? FilterTime {get; set;}
+    public string? IndexName {get; set;}
     public Schedule? Schedule {get; set;}
     public SystemMap? System {get; set;}
-    public Option? Options {get; set;}
     public Extraction() {}
     public Extraction(
         string name,
         Schedule schedule,
-        SystemMap system,
-        Option option
+        SystemMap system
     ) {
         Name = name;
         Schedule = schedule;
         System = system;
-        Options = option;
     }
 }
