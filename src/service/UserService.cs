@@ -73,7 +73,6 @@ public class UserService : ServiceBase<User>, IService<User, int>
             return select.Error;
         }
 
-        encryptedUser.Id = id;
         var update = await Repository.Update("id", encryptedUser, id);
         if(!update.IsSuccessful) {
             return update.Error;
