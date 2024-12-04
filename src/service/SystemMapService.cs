@@ -41,6 +41,7 @@ public class SystemMapService : ServiceBase<SystemMap>, IService<SystemMap, int>
             return select.Error;
         }
 
+        system.Id = id;
         var update = await Repository.Update("id", system, id);
         if(!update.IsSuccessful) {
             return update.Error;

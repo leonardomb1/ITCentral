@@ -14,6 +14,11 @@ public class GenericController : ControllerBase
         using Message<string> res = new(statusId, "Not Found", true, null!);
         await context.Response.Send(res.AsJsonString());
     }
+    public static async Task Options(HttpContextBase ctx)
+    {
+        ctx.Response.Headers.Add("Allow", "OPTIONS, GET, POST, PUT, DELETE");
+        await ctx.Response.Send();
+    }
     public static async Task Authenticate(HttpContextBase ctx)
     {
         if(ctx.Request.Url.RawWithoutQuery == "/api/users/login") return;

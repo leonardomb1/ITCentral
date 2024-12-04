@@ -41,6 +41,7 @@ public class ScheduleService : ServiceBase<Schedule>, IService<Schedule, int>
             return select.Error;
         }
 
+        system.Id = id;
         var update = await Repository.Update("id", system, id);
         if(!update.IsSuccessful) {
             return update.Error;

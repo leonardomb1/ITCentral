@@ -41,6 +41,7 @@ public class ExtractionService : ServiceBase<Extraction>, IService<Extraction, i
             return select.Error;
         }
 
+        system.Id = id;
         var update = await Repository.Update("id", system, id);
         if(!update.IsSuccessful) {
             return update.Error;

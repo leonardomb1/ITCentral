@@ -1,6 +1,7 @@
 services:
-  ITCentral:
+  api:
     image: itcentral:0.0.1
+    hostname: itcentral-api
     build:
       context: .
       dockerfile: Dockerfile 
@@ -11,7 +12,7 @@ services:
       DB_TYPE: ${DB_TYPE}
       CONNECTION_STRING: ${CONNECTION_STRING}
       SSL_ENABLED: ${SSL_ENABLED}
-      HOST_NAME: ${HOST_NAME}
+      HOST_NAME: itcentral-api
       ENABLE_LOG_DUMP: ${ENABLE_LOG_DUMP}
       LOG_DUMP_TIME: ${LOG_DUMP_TIME}
       LOG_FILE_PATH: ${LOG_FILE_PATH}
@@ -19,7 +20,7 @@ services:
       SESSION_TIME: ${SESSION_TIME}
       API_KEY: ${API_KEY}
     ports:
-      - "${PORT_NUMBER}:${PORT_NUMBER}"
+      - "22000:${PORT_NUMBER}"
     volumes:
       - ~/containers/itcentral/db:/app/db
       - ~/containers/itcentral/log:/app/log

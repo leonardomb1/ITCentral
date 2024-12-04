@@ -29,6 +29,10 @@ public class SqlLiteCall : CallBase, IDisposable
     {
         query.Append(" PRIMARY KEY AUTOINCREMENT");
     }
+    protected override string AddForeignKeyConstraint(string tableName, string columnName, string fkTable, string fkColumn)
+    {
+        return $" FOREIGN KEY ([{columnName}]) REFERENCES [{fkTable}]([{fkColumn}])";
+    }
 
     protected override string GetSqlType(Type type)
     {

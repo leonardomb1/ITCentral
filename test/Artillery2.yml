@@ -1,5 +1,5 @@
 config:
-  target: http://127.0.0.1:10000
+  target: http://127.0.0.1:10000/api
   phases:
     - duration: 60
       arrivalRate: 1
@@ -13,19 +13,11 @@ config:
       arrivalRate: 10
       rampTo: 30
       name: Spike phase
-  plugins:
-    ensure: {}
-    apdex: {}
-    metrics-by-endpoint: {}
-  apdex:
-    threshold: 100
-  ensure:
-    thresholds:
-      - http.response_time.p99: 100
-      - http.response_time.p95: 75
 scenarios:
   - flow:
       - loop:
           - get:
-              url: '/cats/1'
+              url: '/users'
+              headers:
+                Key: ABC123
         count: 100

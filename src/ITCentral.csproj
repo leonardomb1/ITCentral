@@ -13,6 +13,7 @@
     <PackageReference Include="Watson" Version="6.*" />
     <PackageReference Include="YamlDotNet" Version="12.*" />
     <PackageReference Include="System.Text.Json" Version="8.*" />
+    <PackageReference Include="System.Private.Uri" Version="4.*" />
   </ItemGroup>
 
 </Project>

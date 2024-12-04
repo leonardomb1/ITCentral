@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
+using System.Reflection;
 using System.Text;
 using ITCentral.Common;
 using ITCentral.Models;
@@ -12,6 +14,7 @@ public abstract class CallBase : IDBCall
     protected abstract DbCommand CreateDbCommand(string query);
     protected abstract Task<string> GenerateSyncLookupQueryAsync(string tableName);
     protected abstract void AddPrimaryKeyConstraint(StringBuilder query, string tableName);
+    protected abstract string AddForeignKeyConstraint(string tableName,string columnName, string fkTable, string fkColumn);
     protected async Task ExecuteNonQueryAsync(string query)
     {
         using var command = CreateDbCommand(query);
@@ -26,38 +29,44 @@ public abstract class CallBase : IDBCall
     {
         var tableName = GetTableName(typeof(T));
         var queryBuilder = new StringBuilder();
+        List<string> constraints = new();
 
         queryBuilder.AppendLine($"CREATE TABLE [{tableName}] (");
         var properties = typeof(T).GetProperties();
         
-        for (int i = 0; i < properties.Length; i++)
+        foreach(var property in properties)
         {
-            var property = properties[i];
-            var columnName = property.Name;
             var propType = property.PropertyType;
-            var isPrimaryKey = columnName.Equals("Id", StringComparison.OrdinalIgnoreCase);
+            var primaryKey = property.GetCustomAttribute<KeyAttribute>();
+            var foreignKeys = property.GetCustomAttribute<ForeignKeyAttribute>();
+            var columnName = foreignKeys != null ? property.GetCustomAttribute<ForeignKeyAttribute>()!.Name : property.Name;
 
-            if (Nullable.GetUnderlyingType(property.PropertyType) != null) {
+            if (Nullable.GetUnderlyingType(property.PropertyType) != null) 
+            {
                 propType = Nullable.GetUnderlyingType(propType);
             }
-
-            var sqlType = GetSqlType(propType!);
             
+            string sqlType = foreignKeys == null ? GetSqlType(propType!) : GetSqlType(typeof(int));
             queryBuilder.Append($"    [{columnName}] {sqlType}");
 
-            if (isPrimaryKey)
+            if (primaryKey != null)
             {
                 AddPrimaryKeyConstraint(queryBuilder, tableName);
             }
-            
-            if (i < properties.Length - 1)
+
+            if (foreignKeys != null)
             {
-                queryBuilder.AppendLine(",");
+                var foreignTable = GetTableName(propType!);
+                var foreignKeyColumn = "Id";
+
+                constraints.Add(AddForeignKeyConstraint(tableName, columnName, foreignTable, foreignKeyColumn));
             }
-            else
-            {
-                queryBuilder.AppendLine();
-            }
+
+            queryBuilder.AppendLine(",");
+        }
+
+        if (constraints.Count != 0) {
+            queryBuilder.AppendLine(string.Join(",\n", constraints));
         }
 
         queryBuilder.AppendLine(");");
@@ -92,40 +101,101 @@ public abstract class CallBase : IDBCall
     public async Task<Result<List<T?>, Error>> ReadFromDb<T>() where T : class
     {
         var tableName = GetTableName(typeof(T));
-        string query = $"SELECT * FROM {tableName}";
+        var query = new StringBuilder($"SELECT * FROM {tableName}");
+
+        var foreignKeys = typeof(T).GetProperties()
+            .Where(p => p.GetCustomAttribute<ForeignKeyAttribute>() != null);
+
+        foreach (var fk in foreignKeys)
+        {
+            var fkTable = GetTableName(fk.PropertyType);
+            var fkColumn = fk.GetCustomAttribute<ForeignKeyAttribute>()!.Name;
+
+            query.Append($" INNER JOIN [{fkTable}] ON [{tableName}].[{fkColumn}] = [{fkTable}].[id]");
+        }
 
         try
         {
-            using var command = CreateDbCommand(query);
+            using var command = CreateDbCommand(query.ToString());
             using var reader = await command.ExecuteReaderAsync();
             var results = new List<T?>();
 
             while (await reader.ReadAsync())
             {
-                T? obj = Activator.CreateInstance(typeof(T), true) as T;
+                var obj = Activator.CreateInstance(typeof(T), true) as T;
 
-                for (int i = 0; i < reader.FieldCount; i++)
+                foreach (var property in typeof(T).GetProperties())
                 {
-                    var property = typeof(T).GetProperty(reader.GetName(i));
-                    if (property != null && !reader.IsDBNull(i))
+                    var columnName = property.GetCustomAttribute<ColumnAttribute>()?.Name ?? property.Name;
+                    var foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
+                    var properColumn = foreignKeyAttribute?.Name ?? columnName;
+                    if (reader.GetOrdinal(properColumn) != -1)
                     {
-                        var propertyType = property!.PropertyType;
-                        var value = reader.GetValue(i);
+                        if (!reader.IsDBNull(reader.GetOrdinal(properColumn)))
+                    {
+                        var value = reader.GetValue(reader.GetOrdinal(properColumn));
+                        var propertyType = property.PropertyType;
 
-                        if (Nullable.GetUnderlyingType(propertyType) != null)
+                        if (propertyType.IsClass && propertyType != typeof(string))
                         {
-                            var underlyingType = Nullable.GetUnderlyingType(propertyType);
-                            property.SetValue(obj, Convert.ChangeType(value, underlyingType!));
+                            if (value is long || value is int)
+                            {
+                                var foreignObject = Activator.CreateInstance(propertyType);
+                                var foreignProperty = propertyType.GetProperty("Id");
+                                foreignProperty?.SetValue(foreignObject, Convert.ChangeType(value, foreignProperty.PropertyType));
+                                property.SetValue(obj, foreignObject);
+                            }
                         }
                         else
                         {
-                            property.SetValue(obj, Convert.ChangeType(value, propertyType));
+                            if (Nullable.GetUnderlyingType(propertyType) != null)
+                            {
+                                var underlyingType = Nullable.GetUnderlyingType(propertyType)!;
+                                property.SetValue(obj, Convert.ChangeType(value, underlyingType));
+                            }
+                            else
+                            {
+                                property.SetValue(obj, Convert.ChangeType(value, property.PropertyType));
+                            }
                         }
                     }
                 }
 
-                results.Add(obj);
+               if (foreignKeyAttribute != null)
+                {
+                    var foreignObject = Activator.CreateInstance(property.PropertyType);
+
+                    foreach (var foreignProperty in property.PropertyType.GetProperties())
+                    {
+                        var foreignColumn = foreignProperty.GetCustomAttribute<ColumnAttribute>()?.Name ?? foreignProperty.Name;
+                        var foreignQualifiedColumnName = $"{foreignKeyAttribute.Name ?? foreignProperty.Name}.{foreignColumn}";
+
+                        if (reader.GetOrdinal(foreignQualifiedColumnName) != -1)
+                        {
+                            if (!reader.IsDBNull(reader.GetOrdinal(foreignQualifiedColumnName)))
+                            {
+                                var foreignValue = reader.GetValue(reader.GetOrdinal(foreignQualifiedColumnName));
+                                var foreignPropertyType = foreignProperty.PropertyType;
+
+                                if (Nullable.GetUnderlyingType(foreignPropertyType) != null)
+                                {
+                                    var underlyingType = Nullable.GetUnderlyingType(foreignPropertyType)!;
+                                    foreignProperty.SetValue(foreignObject, Convert.ChangeType(foreignValue, underlyingType));
+                                }
+                                else
+                                {
+                                    foreignProperty.SetValue(foreignObject, Convert.ChangeType(foreignValue, foreignPropertyType));
+                                }
+                            }
+                        }
+                    }
+
+                    property.SetValue(obj, foreignObject);
+                }
             }
+
+            results.Add(obj);
+        }
 
             return results;
         }
@@ -134,14 +204,28 @@ public abstract class CallBase : IDBCall
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
+
     public async Task<Result<List<T?>, Error>> ReadFromDb<T, V>(string id, V val) where T : class
     {
         var tableName = GetTableName(typeof(T));
-        string query = $"SELECT * FROM {tableName} WHERE {id} = @tableId";
+        var query = new StringBuilder($"SELECT * FROM {tableName}");
+
+        var foreignKeys = typeof(T).GetProperties()
+            .Where(p => p.GetCustomAttribute<ForeignKeyAttribute>() != null);
+
+        foreach (var fk in foreignKeys) 
+        {
+            var fkTable = GetTableName(fk.PropertyType);
+            var fkColumn = fk.GetCustomAttribute<ForeignKeyAttribute>();
+
+            query.Append($" INNER JOIN [{fkTable}] ON [{tableName}].[id] = [{fkTable}].[{fkColumn}]");
+        }
+
+        query.Append($" WHERE [{id}] = @tableId");
 
         try
         {
-            using var command = CreateDbCommand(query);
+            using var command = CreateDbCommand(query.ToString());
             var parameter = command.CreateParameter();
             parameter.ParameterName = "@tableId";
             parameter.Value = val;
@@ -149,36 +233,63 @@ public abstract class CallBase : IDBCall
 
             using var reader = await command.ExecuteReaderAsync();
             var results = new List<T?>();
-            
-            T? obj = Activator.CreateInstance(typeof(T), true) as T;
 
-            if (await reader.ReadAsync())
+            while (await reader.ReadAsync())
             {
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    var property = typeof(T).GetProperty(reader.GetName(i));
-                    if (property != null && !reader.IsDBNull(i))
-                    {
-                        var propertyType = property!.PropertyType;
-                        var value = reader.GetValue(i);
+                var obj = Activator.CreateInstance(typeof(T), true) as T;
 
-                        if (Nullable.GetUnderlyingType(propertyType) != null)
-                        {
-                            var underlyingType = Nullable.GetUnderlyingType(propertyType);
-                            property.SetValue(obj, Convert.ChangeType(value, underlyingType!));
+                foreach (var property in typeof(T).GetProperties())
+                {
+                    var columnName = property.GetCustomAttribute<ColumnAttribute>()?.Name ?? property.Name;
+                    if (!reader.HasRows || reader.GetOrdinal(columnName) == -1) continue;
+                    if (!reader.IsDBNull(reader.GetOrdinal(columnName)))
+                    {
+                        var value = reader.GetValue(reader.GetOrdinal(columnName));
+                        var propertyType = property.PropertyType;
+
+                        if (Nullable.GetUnderlyingType(propertyType) != null) {
+                            var underlyingType = Nullable.GetUnderlyingType(propertyType)!;
+                            property.SetValue(obj, Convert.ChangeType(value, underlyingType));
+                        } else {
+                            property.SetValue(obj, Convert.ChangeType(value, property.PropertyType));
                         }
-                        else
+                    }
+
+                    var foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
+                    if (foreignKeyAttribute != null)
+                    {
+                        var foreignObject = Activator.CreateInstance(property.PropertyType);
+
+                        foreach (var foreignProperty in property.PropertyType.GetProperties())
                         {
-                            property.SetValue(obj, Convert.ChangeType(value, propertyType));
+                            var foreignColumn = foreignProperty.GetCustomAttribute<ColumnAttribute>()?.Name ?? foreignProperty.Name;
+
+                            if (!reader.HasRows || reader.GetOrdinal(foreignColumn) == -1) continue;
+                            if (!reader.IsDBNull(reader.GetOrdinal(foreignColumn)))
+                            {
+                                var foreignValue = reader.GetValue(reader.GetOrdinal(foreignColumn));
+                                var foreignPropertyType = foreignProperty.PropertyType;
+
+                                if (Nullable.GetUnderlyingType(foreignPropertyType) != null)
+                                {
+                                    var underlyingType = Nullable.GetUnderlyingType(foreignPropertyType)!;
+                                    foreignProperty.SetValue(foreignObject, Convert.ChangeType(foreignValue, underlyingType));
+                                }
+                                else
+                                {
+                                    foreignProperty.SetValue(foreignObject, Convert.ChangeType(foreignValue, foreignPropertyType));
+                                }
+                            }
                         }
+
+                        property.SetValue(obj, foreignObject);
                     }
                 }
                 results.Add(obj);
             }
-            
             return results;
-        } 
-        catch (Exception ex) 
+        }
+        catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
@@ -188,10 +299,18 @@ public abstract class CallBase : IDBCall
         var tableName = GetTableName(typeof(T));
         var properties = typeof(T)
             .GetProperties()
-            .Where(p => p.Name != "Id");
+            .Where(p => p.GetCustomAttribute<KeyAttribute>() == null);
 
-        var columnNames = string.Join(", ", properties.Select(p => $"[{p.Name}]"));
-        var paramNames = string.Join(", ", properties.Select(p => $"@{p.Name}"));
+        var columnNames = string.Join(", ", properties.Select(p => {
+            var fk = p.GetCustomAttribute<ForeignKeyAttribute>()?.Name;
+            return fk != null ? $"[{fk}]" : $"[{p.Name}]";
+        }));
+
+        var paramNames = string.Join(", ", properties.Select(p => {
+            var fk = p.GetCustomAttribute<ForeignKeyAttribute>()?.Name;
+            return fk != null ? $"@{fk}" : $"@{p.Name}";
+        }));
+
         var query = $"INSERT INTO {tableName} ({columnNames}) VALUES ({paramNames});";
         
         try
@@ -199,9 +318,17 @@ public abstract class CallBase : IDBCall
             using var command = CreateDbCommand(query);
 
             foreach (var property in properties) {
-                var value = property.GetValue(entity) ?? DBNull.Value;
+                var foreignKey = property.GetCustomAttribute<ForeignKeyAttribute>();
+                var value = foreignKey != null
+                    ? property.PropertyType.GetProperty("Id")?.GetValue(property.GetValue(entity)) ?? DBNull.Value
+                    : property.GetValue(entity) ?? DBNull.Value;
+
+                var parameterName = foreignKey != null
+                    ? $"@{foreignKey.Name}"
+                    : $"@{property.Name}";
+
                 var parameter = command.CreateParameter();
-                parameter.ParameterName = $"@{property.Name}";
+                parameter.ParameterName = parameterName;
                 parameter.Value = value;
                 command.Parameters.Add(parameter);
             }
@@ -219,7 +346,7 @@ public abstract class CallBase : IDBCall
         var tableName = GetTableName(typeof(T));
         var properties = typeof(T)
             .GetProperties()
-            .Where(p => p.Name != id);
+            .Where(p => p.GetCustomAttribute<KeyAttribute>() == null);
 
         var mapping = string.Join(", ", properties.Select(p => $"[{p.Name}] = @{p.Name}"));
 

@@ -32,6 +32,10 @@ public class SqlServerCall : CallBase, IDisposable
         query.Append(" IDENTITY(1,1)");
         query.Append($" CONSTRAINT IX_{tableName.ToUpper()}_PK PRIMARY KEY CLUSTERED");
     }
+    protected override string AddForeignKeyConstraint(string tableName, string columnName, string fkTable, string fkColumn)
+    {
+        return $" CONSTRAINT IX_{tableName.ToUpper()}_FK FOREIGN KEY ([{columnName}]) REFERENCES [{fkTable}]([{fkColumn}])";
+    }
 
     protected override string GetSqlType(Type type)
     {   

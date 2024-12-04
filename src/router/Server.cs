@@ -18,6 +18,9 @@ internal class Server
             NotFound
         );
 
+        // Options Request
+        service.Routes.Preflight = Options; 
+
         // Default routing managers
         var postAuth = service.Routes.PostAuthentication;
         var preAuth = service.Routes.PreAuthentication;
@@ -37,12 +40,30 @@ internal class Server
         
         // SystemMap model routes
         var systemMapController = new SystemMapController();
-        string system = root+"/system";
+        string system = root+"/systems";
         postAuth.Static.Add(WebMethod.GET, system, systemMapController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.POST, system, systemMapController.Post, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.GET, system+"/id/{systemId}", systemMapController.GetById, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.PUT, system+"/id/{systemId}", systemMapController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, system+"/id/{systemId}", systemMapController.Delete, ErrorDefaultRoute);        
+
+        // Schedule model routes
+        var scheduleController = new ScheduleController();
+        string schedule = root+"/schedules";
+        postAuth.Static.Add(WebMethod.GET, schedule, scheduleController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, schedule, scheduleController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, schedule+"/id/{scheduleId}", scheduleController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, schedule+"/id/{scheduleId}", scheduleController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, schedule+"/id/{scheduleId}", scheduleController.Delete, ErrorDefaultRoute);        
+
+        // Schedule model routes
+        var extractionController = new ExtractionController();
+        string extraction = root+"/extractions";
+        postAuth.Static.Add(WebMethod.GET, extraction, extractionController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, extraction, extractionController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, extraction+"/id/{extractionId}", extractionController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, extraction+"/id/{extractionId}", extractionController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, extraction+"/id/{extractionId}", extractionController.Delete, ErrorDefaultRoute);
 
         // Authentication
         service.Routes.AuthenticateRequest = Authenticate;
