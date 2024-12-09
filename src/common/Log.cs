@@ -6,7 +6,9 @@ namespace ITCentral.Common;
 public static class Log
 {
     private static readonly ConcurrentQueue<string> logQueue = new();
+    
     private static readonly string hostname = Environment.MachineName;
+    
     private static string LogPrefix() => $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss:fff}]::";
 
     static Log()

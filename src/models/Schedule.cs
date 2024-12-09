@@ -1,17 +1,25 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+using LinqToDB.Mapping;
 
 namespace ITCentral.Models;
 
 [Table("SCHEDULES")]
-public class Schedule
+public class Schedule : IModel
 {
-    [Key]
+    [PrimaryKey, Identity]
     public int? Id {get; set;}
-    public string? Name {get; set;}
-    public bool? Status {get; set;}
-    public int? Value {get; set;}
+
+    [Column, NotNull, JsonRequired, JsonPropertyName("ScheduleName")]
+    public string Name {get; set;} = "";
+    
+    [Column, NotNull, JsonRequired]
+    public bool Status {get; set;}
+    
+    [Column, NotNull, JsonRequired]
+    public int Value {get; set;}
+    
     public Schedule() {}
+    
     public Schedule(
         string name,
         bool status,

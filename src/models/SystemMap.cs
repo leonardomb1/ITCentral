@@ -1,16 +1,22 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+using LinqToDB.Mapping;
 
 namespace ITCentral.Models;
 
 [Table("SYSTEM_MAPS")]
-public class SystemMap
+public class SystemMap : IModel
 {
-    [Key]
-    public int Id {get; set;}
-    public string? Name {get; set;}
-    public string? ConnectionString {get; set;}
+    [PrimaryKey, Identity]
+    public int? Id {get; set;}
+    
+    [Column, NotNull, JsonRequired, JsonPropertyName("SystemName")]
+    public string Name {get; set;} = "";
+    
+    [Column, NotNull, JsonRequired]
+    public string ConnectionString {get; set;} = "";
+    
     public SystemMap() {}
+    
     public SystemMap(
         string name,
         string conStr

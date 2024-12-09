@@ -1,37 +1,57 @@
 namespace ITCentral.Common;
 using System.Reflection;
 using ITCentral.Data;
+using ITCentral.Models;
+using ITCentral.Router;
+using LinqToDB;
+using LinqToDB.Data;
+using LinqToDB.Mapping;
 using YamlDotNet.RepresentationModel;
 public static class AppCommon
 {
     public const bool Success = true;
-    public const string ProgramVersion = "0.0.1";
+    
+    public const bool Fail = false;
+    
+    public const string ProgramVersion = "0.0.2";
+    
     public const string ProgramName = "ITCentral";
+    
+    public static string VersionHeader => $"{ProgramName} - Version: {ProgramVersion}";
+    
     public const string MessageInfo = "INFO";
+    
     public const string MessageWarning = "WARN";
+    
     public const string MessageRequest = "REQUEST";
+    
     public const string MessageError = "ERROR";
+    
     public static string LogFilePath {get; private set;} = "";
+    
     public static int LogDumpTime {get; private set;}
-    public static int SessionTime {get; private set;}
-    public static bool Logging {get; private set;}
-    public static int PortNumber {get; private set;}
-    public static string ConnectionString {get; private set;} = "";
-    public static bool Ssl {get; private set;}
-    public static string HostName {get; private set;} = "";
-    public static string DbType {get; private set;} = "";
-    public static string MasterKey {get; private set;} = "";
-    public static string ApiKey {get; private set;} = "";
+    
+    public static int MaxDegreeParallel {get; private set;}
 
-    public static IDBCall DbConfig()
-    {
-        return DbType switch
-        {
-            "SqlServer" => new SqlServerCall(ConnectionString),
-            "Sqlite" => new SqlLiteCall(ConnectionString),
-            _ => throw new Exception("Unsupported database type")
-        };
-    }
+    public static int ConsumerFetchMax {get; private set;}
+    
+    public static int SessionTime {get; private set;}
+    
+    public static bool Logging {get; private set;}
+    
+    public static int PortNumber {get; private set;}
+    
+    public static string ConnectionString {get; private set;} = "";
+    
+    public static bool Ssl {get; private set;}
+    
+    public static string HostName {get; private set;} = "";
+    
+    public static string DbType {get; private set;} = "";
+    
+    public static string MasterKey {get; private set;} = "";
+    
+    public static string ApiKey {get; private set;} = "";
 
     private static readonly Dictionary<string, string> keyMap = new()
     {
@@ -46,25 +66,120 @@ public static class AppCommon
         { "ENCRYPT_KEY", nameof(MasterKey) },
         { "SESSION_TIME", nameof(SessionTime) },
         { "API_KEY", nameof(ApiKey) },
+        { "MAX_DEGREE_PARALLEL", nameof(MaxDegreeParallel) },
+        { "MAX_CONSUMER_FETCH", nameof(ConsumerFetchMax) },
     };
+    
     public static void ShowHelp() 
     {
         ShowSignature();
         Console.WriteLine(
-            $"Usage: {ProgramName} [options]\n" +
-            "Options:\n" +
+            $"Usage: {VersionHeader} \n" +
+            "   [Options]: \n" +
             "   -h --help      Show this help message\n" +
             "   -v --version   Show version information\n" +
-            "   -e --environment    [Options]  Use configuration variables\n\n" +
-            "   [Options]: \n" +
-            "   Port, DbType, ConnectionString, SSL, Host, Logging, LogTime, LogPath"
+            "   -e --environment  Use environment variables for configuration\n" +
+            "   -f --file  Use yml file for configuration\n" +
+            "   -c --console  Use command-line arguments for configuration"
             );
+    }
+
+    public static void InitializeDb()
+    {
+        DataConnection.DefaultSettings = new CallProvider();
+
+        using var repository = new CallBase();
+
+        var entityTypes = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(t => {
+                return typeof(IModel)
+                    .IsAssignableFrom(t) && 
+                    t.IsClass && 
+                    t.GetCustomAttribute<TableAttribute>() != null;
+                })
+            .ToList();
+
+        var dependencies = new Dictionary<Type, List<Type>>();
+
+        foreach (var type in entityTypes)
+        {
+            var foreignKeys = type.GetProperties()
+                .Where(p => entityTypes.Contains(p.PropertyType))
+                .Select(p => p.PropertyType)
+                .Distinct()
+                .ToList();
+
+            dependencies[type] = foreignKeys;
+        }
+
+        var sortedEntities = TopologicalSort(entityTypes, dependencies);
+
+        foreach (var entityType in sortedEntities)
+        {
+            var tableAttribute = entityType.GetCustomAttribute<TableAttribute>();
+            string tableName = tableAttribute?.Name ?? entityType.Name;
+
+            if (!repository.Exists(tableName))
+            {
+                Log.Out($"Creating table for model class: {entityType.Name}");
+
+                var createTableMethod = typeof(DataExtensions)
+                    .GetMethod(nameof(DataExtensions.CreateTable))?
+                    .MakeGenericMethod(entityType);
+
+                createTableMethod?.Invoke(null,
+                [
+                    repository, 
+                    null,       
+                    null,       
+                    null,       
+                    null,       
+                    null,       
+                    null,       
+                    null,       
+                    TableOptions.None
+                ]);
+
+                Log.Out($"Table created for: {entityType.Name}");
+            }
+            else
+            {
+                Log.Out($"Table already exists for: {entityType.Name}");
+            }
+        }
+    }
+
+    private static List<Type> TopologicalSort(List<Type> types, Dictionary<Type, List<Type>> dependencies)
+    {
+        var sorted = new List<Type>();
+        var visited = new HashSet<Type>();
+
+        void Visit(Type type)
+        {
+            if (visited.Contains(type))
+                return;
+
+            visited.Add(type);
+
+            if (dependencies.TryGetValue(type, out var dependentTypes))
+            {
+                foreach (var depType in dependentTypes)
+                    Visit(depType);
+            }
+
+            sorted.Add(type);
+        }
+
+        foreach (var type in types)
+            Visit(type);
+
+        return sorted;
     }
 
     public static void ShowVersion() 
     {
-        ShowSignature();
-        Console.WriteLine($"{ProgramName} version {ProgramVersion}");
+        Console.WriteLine(VersionHeader);
     }
 
     private static void ShowSignature() 
@@ -88,7 +203,11 @@ public static class AppCommon
                 var convert = Convert.ChangeType(val, propertyInfo.PropertyType);
                 propertyInfo.SetValue(null, convert);
             }
-        }  
+        }
+
+        InitializeDb();
+        Server server = new();
+        server.Run();
     }
 
     public static void InitializeFromEnv()
@@ -111,6 +230,10 @@ public static class AppCommon
                 propertyInfo.SetValue(null, value);
             }
         }
+
+        InitializeDb();
+        Server server = new();
+        server.Run();
     }
 
     public static void InitializeFromYaml(string yamlFilePath)
@@ -142,5 +265,9 @@ public static class AppCommon
                 }
             }
         }
+
+        InitializeDb();
+        Server server = new();
+        server.Run();
     }
 }

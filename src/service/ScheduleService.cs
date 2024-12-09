@@ -1,61 +1,120 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
+using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class ScheduleService : ServiceBase<Schedule>, IService<Schedule, int>
+public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
 {
+    private readonly bool disposed = false;
+    
     public ScheduleService() : base() { }
-    public async Task<Result<List<Schedule>, Error>> Get()
+    
+    public Result<List<Schedule>, Error> Get()
     {
-        var select = await Repository.ReadFromDb<Schedule>();
-        if(!select.IsSuccessful) {
-            return select.Error;
+        try 
+        {
+            var select = from s in Repository.Schedules
+                         select s;
+            
+            return select.ToList();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return select.Value!;
     }
-    public async Task<Result<Schedule?, Error>> GetById(int id)
+    
+    public Result<Schedule?, Error> Get(int id)
     {
-        var selectById = await Repository.ReadFromDb<Schedule, int>("id", id);
-        if(!selectById.IsSuccessful) {
-            return selectById.Error;
+        try 
+        {
+            var select = from s in Repository.Schedules
+                         where s.Id == id
+                         select s;
+            
+            return select.FirstOrDefault();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return selectById.Value.FirstOrDefault();
     }
-    public async Task<Result<bool, Error>> Post(Schedule system)
+    
+    public Result<bool, Error> Post(Schedule schedule)
     {
-        var insert = await Repository.Insert(system);
-        if(!insert.IsSuccessful) {
-            return insert.Error;
+        try 
+        {
+            var insert = Repository.Insert(schedule);
+            return AppCommon.Success;
+        } 
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return AppCommon.Success;
     }
-    public async Task<Result<Schedule?, Error>> Put(Schedule system, int id)
+    
+    public Result<bool, Error> Put(Schedule schedule, int id)
     {
-        var select = await Repository.CheckRecord<Schedule, int>("id", id);
-        if(!select.IsSuccessful) {
-            return select.Error;
-        }
+        try 
+        {
+            var check = from s in Repository.Schedules
+                        where s.Id == id
+                        select s.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        system.Id = id;
-        var update = await Repository.Update("id", system, id);
-        if(!update.IsSuccessful) {
-            return update.Error;
-        }
+            schedule.Id = id;
 
-        return update.Value;
+            Repository.Update(schedule); 
+
+            return AppCommon.Success;
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
-    public async Task<Result<bool, Error>> Delete(int id)
+    
+    public Result<bool, Error> Delete(int id)
     {
-        var delete = await Repository.DeleteFromDb<Schedule, int>("id", id);
-        if(!delete.IsSuccessful) {
-            return delete.Error;
-        }
+        try
+        {
+            var check = from s in Repository.Schedules
+                        where s.Id == id
+                        select s.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        return delete.Value;
+            Repository.Schedules
+                .Where(s => s.Id == id)
+                .Delete();
+
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+    
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposed && !disposing)
+        {
+            Repository.Dispose();
+        }
+    }
+
+    ~ScheduleService()
+    {
+        Dispose(false);
     }
 }

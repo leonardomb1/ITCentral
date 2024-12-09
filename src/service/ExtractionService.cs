@@ -1,61 +1,128 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
+using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class ExtractionService : ServiceBase<Extraction>, IService<Extraction, int>
+public class ExtractionService : ServiceBase, IService<Extraction, int>, IDisposable
 {
+    private readonly bool disposed = false;
+    
     public ExtractionService() : base() { }
-    public async Task<Result<List<Extraction>, Error>> Get()
+    
+    public Result<List<Extraction>, Error> Get()
     {
-        var select = await Repository.ReadFromDb<Extraction>();
-        if(!select.IsSuccessful) {
-            return select.Error;
+        try 
+        {
+            var select = from e in Repository.Extractions
+                         join sys in Repository.SystemMaps
+                            on e.SystemId equals sys.Id
+                         join sch in Repository.Schedules
+                            on e.ScheduleId equals sch.Id
+                         select Extraction.Build(e, sys, sch);
+            
+            return select.ToList();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return select.Value!;
     }
-    public async Task<Result<Extraction?, Error>> GetById(int id)
+    
+    public Result<Extraction?, Error> Get(int id)
     {
-        var selectById = await Repository.ReadFromDb<Extraction, int>("id", id);
-        if(!selectById.IsSuccessful) {
-            return selectById.Error;
+        try 
+        {
+             var select = from e in Repository.Extractions
+                          join sys in Repository.SystemMaps
+                            on e.SystemId equals sys.Id
+                          join sch in Repository.Schedules
+                            on e.ScheduleId equals sch.Id
+                          where e.Id == id
+                          select Extraction.Build(e, sys, sch);
+            
+            return select.FirstOrDefault();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return selectById.Value.FirstOrDefault();
     }
-    public async Task<Result<bool, Error>> Post(Extraction system)
+    
+    public Result<bool, Error> Post(Extraction extraction)
     {
-        var insert = await Repository.Insert(system);
-        if(!insert.IsSuccessful) {
-            return insert.Error;
+        try 
+        {
+            var insert = Repository.Insert(extraction);
+            return AppCommon.Success;
+        } 
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return AppCommon.Success;
     }
-    public async Task<Result<Extraction?, Error>> Put(Extraction system, int id)
+    
+    public Result<bool, Error> Put(Extraction extraction, int id)
     {
-        var select = await Repository.CheckRecord<Extraction, int>("id", id);
-        if(!select.IsSuccessful) {
-            return select.Error;
-        }
+        try 
+        {
+            var check = from e in Repository.Extractions
+                        where e.Id == id
+                        select e.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        system.Id = id;
-        var update = await Repository.Update("id", system, id);
-        if(!update.IsSuccessful) {
-            return update.Error;
-        }
+            extraction.Id = id;
 
-        return update.Value;
+            Repository.Update(extraction); 
+
+            return AppCommon.Success;
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
-    public async Task<Result<bool, Error>> Delete(int id)
+    
+    public Result<bool, Error> Delete(int id)
     {
-        var delete = await Repository.DeleteFromDb<Extraction, int>("id", id);
-        if(!delete.IsSuccessful) {
-            return delete.Error;
-        }
+        try
+        {
+            var check = from e in Repository.Extractions
+                        where e.Id == id
+                        select e.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        return delete.Value;
+            Repository.Extractions
+                .Where(e => e.Id == id)
+                .Delete();
+
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+    
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposed && !disposing)
+        {
+            Repository.Dispose();
+        }
+    }
+
+    ~ExtractionService()
+    {
+        Dispose(false);
     }
 }

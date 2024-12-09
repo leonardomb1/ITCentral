@@ -1,7 +1,7 @@
 using System.Net;
 using ITCentral.App;
 using ITCentral.Common;
-using ITCentral.Models;
+using ITCentral.Types;
 using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
@@ -11,12 +11,12 @@ public class GenericController : ControllerBase
     public static async Task NotFound(HttpContextBase ctx)
     {
         short statusId = BeginRequest(ctx, HttpStatusCode.NotFound);
-        using Message<string> res = new(statusId, "Not Found", true, null!);
+        using Message<string> res = new(statusId, "Not Found", true);
         await context.Response.Send(res.AsJsonString());
     }
     public static async Task Options(HttpContextBase ctx)
     {
-        ctx.Response.Headers.Add("Allow", "OPTIONS, GET, POST, PUT, DELETE");
+        ctx.Response.Headers.Add("access-control-allow-methods", "OPTIONS, GET, POST, PUT, DELETE");
         await ctx.Response.Send();
     }
     public static async Task Authenticate(HttpContextBase ctx)
@@ -29,7 +29,7 @@ public class GenericController : ControllerBase
         if(!ctx.Request.HeaderExists("Authorization"))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
-            using Message<string> errMsg = new(statusId, "Unauthorized", true, null!);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
@@ -39,7 +39,7 @@ public class GenericController : ControllerBase
         if(!SessionManager.IsSessionValid(sessionId))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
-            using Message<string> errMsg = new(statusId, "Unauthorized", true, null!);
+            using Message<string> errMsg = new(statusId, "Unauthorized", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }

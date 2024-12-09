@@ -1,16 +1,22 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+using LinqToDB.Mapping;
 
 namespace ITCentral.Models;
 
 [Table("USERS")]
-public class User
+public class User : IModel
 {
-    [Key]
-    public int Id {get; set;}
-    public string? Name {get; set;}
+    [PrimaryKey, Identity]
+    public int? Id {get; set;}
+    
+    [Column, NotNull, JsonRequired, JsonPropertyName("Username")] 
+    public string Name {get; set;} = "";
+    
+    [Column, Nullable, JsonRequired]
     public string? Password {get; set;}
+    
     public User() {}
+    
     public User(
         string name,
         string password

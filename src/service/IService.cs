@@ -1,13 +1,16 @@
-using ITCentral.Models;
 using ITCentral.Types;
 
 namespace ITCentral.Service;
 
 internal interface IService<T, ID>
 {
-    public Task<Result<List<T>, Error>> Get();
-    public Task<Result<T?, Error>> GetById(ID id);
-    public Task<Result<bool, Error>> Post(T ctx);
-    public Task<Result<T?, Error>> Put(T ctx, ID id);
-    public Task<Result<bool, Error>> Delete(ID id);
+    public Result<List<T>, Error> Get();
+    
+    public Result<T?, Error> Get(ID id);
+    
+    public Result<bool, Error> Post(T ctx);
+    
+    public Result<bool, Error> Put(T ctx, ID id);
+    
+    public Result<bool, Error> Delete(ID id);
 }

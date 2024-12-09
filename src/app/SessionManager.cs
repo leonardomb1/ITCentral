@@ -21,7 +21,8 @@ public static class SessionManager
 
     public static bool IsSessionValid(string sessionId)
     {
-        var session = new SessionService().GetSession(sessionId).Result;
+        var service = new SessionService();
+        var session = service.GetSession(sessionId);
 
         if(!session.IsSuccessful || session.Value is null || DateTime.UtcNow > session.Value.Expiration) {
             return false;

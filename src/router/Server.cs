@@ -7,11 +7,13 @@ using static ITCentral.Controller.GenericController;
 
 namespace ITCentral.Router;
 
-internal class Server
+public sealed class Server
 {
     private readonly ManualResetEvent shutdownEvent = new(false);
+    
     private readonly Webserver service;
-    protected internal Server()
+    
+    public Server()
     {
         service = new Webserver(
             new WebserverSettings(AppCommon.HostName, AppCommon.PortNumber, AppCommon.Ssl),
@@ -56,7 +58,7 @@ internal class Server
         postAuth.Parameter.Add(WebMethod.PUT, schedule+"/id/{scheduleId}", scheduleController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, schedule+"/id/{scheduleId}", scheduleController.Delete, ErrorDefaultRoute);        
 
-        // Schedule model routes
+        // Extraction model routes
         var extractionController = new ExtractionController();
         string extraction = root+"/extractions";
         postAuth.Static.Add(WebMethod.GET, extraction, extractionController.Get, ErrorDefaultRoute);

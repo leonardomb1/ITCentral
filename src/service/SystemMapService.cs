@@ -1,61 +1,120 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
+using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class SystemMapService : ServiceBase<SystemMap>, IService<SystemMap, int>
+public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposable
 {
+    private readonly bool disposed = false;
+    
     public SystemMapService() : base() { }
-    public async Task<Result<List<SystemMap>, Error>> Get()
+    
+    public Result<List<SystemMap>, Error> Get()
     {
-        var select = await Repository.ReadFromDb<SystemMap>();
-        if(!select.IsSuccessful) {
-            return select.Error;
+        try 
+        {
+            var select = from s in Repository.SystemMaps
+                         select s;
+            
+            return select.ToList();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return select.Value!;
     }
-    public async Task<Result<SystemMap?, Error>> GetById(int id)
+    
+    public Result<SystemMap?, Error> Get(int id)
     {
-        var selectById = await Repository.ReadFromDb<SystemMap, int>("id", id);
-        if(!selectById.IsSuccessful) {
-            return selectById.Error;
+        try 
+        {
+            var select = from s in Repository.SystemMaps
+                         where s.Id == id
+                         select s;
+            
+            return select.FirstOrDefault();
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return selectById.Value.FirstOrDefault();
     }
-    public async Task<Result<bool, Error>> Post(SystemMap system)
+    
+    public Result<bool, Error> Post(SystemMap system)
     {
-        var insert = await Repository.Insert(system);
-        if(!insert.IsSuccessful) {
-            return insert.Error;
+        try 
+        {
+            var insert = Repository.Insert(system);
+            return AppCommon.Success;
+        } 
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
         }
-
-        return AppCommon.Success;
     }
-    public async Task<Result<SystemMap?, Error>> Put(SystemMap system, int id)
+    
+    public Result<bool, Error> Put(SystemMap system, int id)
     {
-        var select = await Repository.CheckRecord<SystemMap, int>("id", id);
-        if(!select.IsSuccessful) {
-            return select.Error;
-        }
+        try 
+        {
+            var check = from s in Repository.SystemMaps
+                        where s.Id == id
+                        select s.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        system.Id = id;
-        var update = await Repository.Update("id", system, id);
-        if(!update.IsSuccessful) {
-            return update.Error;
-        }
+            system.Id = id;
 
-        return update.Value;
+            Repository.Update(system); 
+
+            return AppCommon.Success;
+        } 
+        catch (Exception ex) 
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
-    public async Task<Result<bool, Error>> Delete(int id)
+    
+    public Result<bool, Error> Delete(int id)
     {
-        var delete = await Repository.DeleteFromDb<SystemMap, int>("id", id);
-        if(!delete.IsSuccessful) {
-            return delete.Error;
-        }
+        try
+        {
+            var check = from s in Repository.Schedules
+                        where s.Id == id
+                        select s.Id;
+            
+            if (check is null) return AppCommon.Fail;
 
-        return delete.Value;
+            Repository.SystemMaps
+                .Where(s => s.Id == id)
+                .Delete();
+
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+    
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposed && !disposing)
+        {
+            Repository.Dispose();
+        }
+    }
+
+    ~SystemMapService()
+    {
+        Dispose(false);
     }
 }
