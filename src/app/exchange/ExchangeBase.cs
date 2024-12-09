@@ -1,35 +1,42 @@
 using System.Data;
 using System.Threading.Channels;
 using ITCentral.Common;
+using ITCentral.Models;
 using ITCentral.Types;
 
 namespace ITCentral.App.Exchange;
 
 public abstract class ExchangeBase
 {
-    public async Task<Result<int, Error>> ChannelParallelize(int max,
-                                                             Func<DataTable> produce,
-                                                             Func<Result<DataTable, Error>> consume)
+    public async Task<Error[]> ChannelParallelize(int max, List<Extraction> extractions)
     {
-        var channel = Channel.CreateBounded<DataTable>(AppCommon.MaxDegreeParallel);
-        var options = new ParallelOptions()
+        Channel<DataTable> channel = Channel.CreateBounded<DataTable>(AppCommon.MaxDegreeParallel);
+        ParallelOptions options = new()
         {
             MaxDegreeOfParallelism = AppCommon.MaxDegreeParallel
         };
+        Error[] errors = [];
 
-        var producer = Task.Run(async () =>
+        Task producer = Task.Run(async () =>
         {
-            await Parallel.ForAsync(1, max + 1, async (i, c) =>
+            await Parallel.ForAsync(1, max + 1, async (int i, CancellationToken c) =>
             {
-                DataTable produced = produce();
-                await channel.Writer.WriteAsync(produced, c);
+                var produced = await FetchDataTable(extractions[i], c);
+                if (!produced.IsSuccessful)
+                {
+                    _ = errors.Append(produced.Error);
+                }
+                await channel.Writer.WriteAsync(produced.Value, c);
             });
 
             channel.Writer.Complete();
         });
 
-        var consumer = Task.Run(async () =>
+        Task consumer = Task.Run(async () =>
         {
+            int attempt = 0;
+            Result<bool, Error> insert = new();
+
             while (await channel.Reader.WaitToReadAsync())
             {
                 using DataTable groupTable = new();
@@ -42,11 +49,22 @@ public abstract class ExchangeBase
 
                 do
                 {
+                    attempt++;
+                    insert = await WriteDataTable(groupTable);
+                } while (!insert.IsSuccessful && attempt < AppCommon.ConsumerAttemptMax);
+            }
 
-                } while ();
+            if (attempt < AppCommon.ConsumerAttemptMax)
+            {
+                _ = errors.Append(new Error("Maximum attempts reached", null, false));
             }
         });
 
         await Task.WhenAll(producer, consumer);
+
+        return errors;
     }
+
+    protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, CancellationToken token);
+    protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table);
 }

@@ -1,4 +1,3 @@
-namespace ITCentral.Common;
 using System.Reflection;
 using ITCentral.Data;
 using ITCentral.Models;
@@ -7,51 +6,64 @@ using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.Mapping;
 using YamlDotNet.RepresentationModel;
+
+namespace ITCentral.Common;
+
 public static class AppCommon
 {
     public const bool Success = true;
-    
-    public const bool Fail = false;
-    
-    public const string ProgramVersion = "0.0.2";
-    
-    public const string ProgramName = "ITCentral";
-    
-    public static string VersionHeader => $"{ProgramName} - Version: {ProgramVersion}";
-    
-    public const string MessageInfo = "INFO";
-    
-    public const string MessageWarning = "WARN";
-    
-    public const string MessageRequest = "REQUEST";
-    
-    public const string MessageError = "ERROR";
-    
-    public static string LogFilePath {get; private set;} = "";
-    
-    public static int LogDumpTime {get; private set;}
-    
-    public static int MaxDegreeParallel {get; private set;}
 
-    public static int ConsumerFetchMax {get; private set;}
-    
-    public static int SessionTime {get; private set;}
-    
-    public static bool Logging {get; private set;}
-    
-    public static int PortNumber {get; private set;}
-    
-    public static string ConnectionString {get; private set;} = "";
-    
-    public static bool Ssl {get; private set;}
-    
-    public static string HostName {get; private set;} = "";
-    
-    public static string DbType {get; private set;} = "";
-    
-    public static string MasterKey {get; private set;} = "";
-    
-    public static string ApiKey {get; private set;} = "";
+    public const bool Fail = false;
+
+    public const string ProgramVersion = "0.0.2";
+
+    public const string ProgramName = "ITCentral";
+
+    public static string VersionHeader => $"{ProgramName} - Version: {ProgramVersion}";
+
+    public const string MessageInfo = "INFO";
+
+    public const string MessageWarning = "WARN";
+
+    public const string MessageRequest = "REQUEST";
+
+    public const string MessageError = "ERROR";
+
+    public const int StructuredNormal = 1;
+
+    public const int StructuredDifferentFiles = 2;
+
+    public static string LogFilePath { get; private set; } = "";
+
+    public static int LogDumpTime { get; private set; }
+
+    public static int MaxDegreeParallel { get; private set; }
+
+    public static int ConsumerFetchMax { get; private set; }
+
+    public static int ProducerLineMax { get; private set; }
+
+    public static int SessionTime { get; private set; }
+
+    public static int ConsumerAttemptMax { get; private set; }
+
+    public static bool Logging { get; private set; }
+
+    public static int PortNumber { get; private set; }
+
+    public static string ConnectionString { get; private set; } = "";
+
+    public static bool Ssl { get; private set; }
+
+    public static string HostName { get; private set; } = "";
+
+    public static string DbType { get; private set; } = "";
+
+    public static string MasterKey { get; private set; } = "";
+
+    public static string ApiKey { get; private set; } = "";
+
+    public static string LdapServer { get; private set; } = "";
 
     private static readonly Dictionary<string, string> keyMap = new()
     {
@@ -68,9 +80,12 @@ public static class AppCommon
         { "API_KEY", nameof(ApiKey) },
         { "MAX_DEGREE_PARALLEL", nameof(MaxDegreeParallel) },
         { "MAX_CONSUMER_FETCH", nameof(ConsumerFetchMax) },
+        { "MAX_CONSUMER_ATTEMPT", nameof(ConsumerAttemptMax) },
+        { "MAX_PRODUCER_LINECOUNT", nameof(ProducerLineMax) },
+        { "LDAP_SERVER", nameof(LdapServer) },
     };
-    
-    public static void ShowHelp() 
+
+    public static void ShowHelp()
     {
         ShowSignature();
         Console.WriteLine(
@@ -92,12 +107,13 @@ public static class AppCommon
 
         var entityTypes = Assembly.GetExecutingAssembly()
             .GetTypes()
-            .Where(t => {
+            .Where(t =>
+            {
                 return typeof(IModel)
-                    .IsAssignableFrom(t) && 
-                    t.IsClass && 
+                    .IsAssignableFrom(t) &&
+                    t.IsClass &&
                     t.GetCustomAttribute<TableAttribute>() != null;
-                })
+            })
             .ToList();
 
         var dependencies = new Dictionary<Type, List<Type>>();
@@ -130,14 +146,14 @@ public static class AppCommon
 
                 createTableMethod?.Invoke(null,
                 [
-                    repository, 
-                    null,       
-                    null,       
-                    null,       
-                    null,       
-                    null,       
-                    null,       
-                    null,       
+                    repository,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     TableOptions.None
                 ]);
 
@@ -177,12 +193,12 @@ public static class AppCommon
         return sorted;
     }
 
-    public static void ShowVersion() 
+    public static void ShowVersion()
     {
         Console.WriteLine(VersionHeader);
     }
 
-    private static void ShowSignature() 
+    private static void ShowSignature()
     {
         Console.WriteLine(
             "Developed by Leonardo M. Baptista\n"
@@ -193,11 +209,12 @@ public static class AppCommon
     {
         var values = args.Skip(1);
 
-        for(int i = 0; i < values.Count(); i++) {
+        for (int i = 0; i < values.Count(); i++)
+        {
             var key = keyMap.ElementAt(i).Value;
             var propertyInfo = typeof(AppCommon).GetProperty(key, BindingFlags.Public | BindingFlags.Static);
 
-            if(propertyInfo != null && propertyInfo.CanWrite)
+            if (propertyInfo != null && propertyInfo.CanWrite)
             {
                 var val = values.ElementAt(i);
                 var convert = Convert.ChangeType(val, propertyInfo.PropertyType);
@@ -217,7 +234,8 @@ public static class AppCommon
             env => Environment.GetEnvironmentVariable(env.Key)
         );
 
-        if (config.Any(variable => variable.Value is null)) {
+        if (config.Any(variable => variable.Value is null))
+        {
             throw new Exception("Environment variable not configured!");
         }
 

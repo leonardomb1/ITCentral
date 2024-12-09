@@ -1,22 +1,45 @@
+using System.Data;
 using ITCentral.Models;
-using ITCentral.Service;
 using ITCentral.Types;
+using LinqToDB.Data;
+using LinqToDB.SchemaProvider;
 
 namespace ITCentral.App.Exchange;
 
 public class DBExchange
 {
-    public async Task<Result<int, Error> DataTransfer()
+    public Result<int, Error> FetchDataTable(Extraction extraction, CancellationToken token)
     {
-        using ExtractionService service = new();
+        try
+        {
+            if (extraction.System == null)
+            {
+                return new Error("Invalid configuration for extraction.", null, false);
+            }
 
-        var result = service.Get();
-        if (!result.IsSuccessful) {
-            return new Error("No table from which to extract.", null, false);
+            using DataConnection DBCall = new(extraction.System.DatabaseType, extraction.System.ConnectionString);
+
+            var tables = DBCall
+                .DataProvider
+                .GetSchemaProvider()
+                .GetSchema(DBCall, new GetSchemaOptions() { })
+                .Tables
+                .Where(table =>
+                {
+                    return table.TableName!.Contains(extraction.Name);
+                });
+
+            foreach (var table in tables)
+            {
+                Console.WriteLine(table.TableName);
+            }
+
+            return 1;
         }
-
-        List<Extraction> extractions = result.Value;
-
-        
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+            throw;
+        }
     }
 }

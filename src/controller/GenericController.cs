@@ -21,12 +21,12 @@ public class GenericController : ControllerBase
     }
     public static async Task Authenticate(HttpContextBase ctx)
     {
-        if(ctx.Request.Url.RawWithoutQuery == "/api/users/login") return;
-        if(ctx.Request.HeaderExists("Key"))
+        if (ctx.Request.Url.RawWithoutQuery == "/api/users/login" || ctx.Request.Url.RawWithoutQuery == "/api/users/ssologin") return;
+        if (ctx.Request.HeaderExists("Key"))
         {
-            if(ctx.Request.Headers.Get("Key") == AppCommon.ApiKey) return;
+            if (ctx.Request.Headers.Get("Key") == AppCommon.ApiKey) return;
         }
-        if(!ctx.Request.HeaderExists("Authorization"))
+        if (!ctx.Request.HeaderExists("Authorization"))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);
@@ -36,7 +36,7 @@ public class GenericController : ControllerBase
 
         string sessionId = ctx.Request.Headers.Get("Authorization")!;
 
-        if(!SessionManager.IsSessionValid(sessionId))
+        if (!SessionManager.IsSessionValid(sessionId))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);

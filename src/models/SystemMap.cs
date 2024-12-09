@@ -7,20 +7,27 @@ namespace ITCentral.Models;
 public class SystemMap : IModel
 {
     [PrimaryKey, Identity]
-    public int? Id {get; set;}
-    
+    public int? Id { get; set; }
+
     [Column, NotNull, JsonRequired, JsonPropertyName("SystemName")]
-    public string Name {get; set;} = "";
-    
+    public string Name { get; set; } = "";
+
     [Column, NotNull, JsonRequired]
-    public string ConnectionString {get; set;} = "";
-    
-    public SystemMap() {}
-    
+    public int TableStructure { get; set; }
+
+    [Column, NotNull, JsonRequired]
+    public string DatabaseType { get; set; } = "";
+
+    [Column, NotNull, JsonRequired]
+    public string ConnectionString { get; set; } = "";
+
+    public SystemMap() { }
+
     public SystemMap(
         string name,
         string conStr
-    ) {
+    )
+    {
         Name = name;
         ConnectionString = conStr;
     }
