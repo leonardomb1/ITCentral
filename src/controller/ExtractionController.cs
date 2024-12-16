@@ -169,33 +169,32 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         await context.Response.Send(res.AsJsonString());
     }
 
-    // public async Task ExecuteExtraction(HttpContextBase ctx)
-    // {
-    //     short statusId;
+    public async Task ExecuteExtraction(HttpContextBase ctx)
+    {
+        short statusId;
 
-    //     using var extraction = new ExtractionService();
-    //     var extractions = extraction.Get();
+        using var extraction = new ExtractionService();
+        var extractions = await extraction.Get();
 
-    //     var dBExchange = new DBExchange();
-    //     var result = dBExchange.FetchDataTable(extractions.Value[0], new CancellationToken());
+        extractions.Value
+            .ForEach(x =>
+            {
+                x.Origin!.ConnectionString = Encryption.SymmetricDecryptAES256(x.Origin!.ConnectionString, AppCommon.MasterKey);
+                x.Destination!.DbString = Encryption.SymmetricDecryptAES256(x.Destination!.DbString, AppCommon.MasterKey);
+            });
 
-    //     if (!result.IsSuccessful)
-    //     {
-    //         await HandleInternalServerError(ctx, result.Error);
-    //         return;
-    //     }
+        var dBExchange = new MSSQLExchange();
+        var result = await dBExchange.ChannelParallelize(extractions.Value);
 
-    //     if (result.Value == 0)
-    //     {
-    //         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-    //         using Message<string> errMsg = new(statusId, "No Result", false);
-    //         await context.Response.Send(errMsg.AsJsonString());
-    //         return;
-    //     }
+        if (!result.IsSuccessful)
+        {
+            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
+            using Message<Error> errMsg = new(statusId, "Extraction Failed", true, result.Error);
+            return;
+        }
 
-    //     statusId = BeginRequest(ctx, HttpStatusCode.OK);
-
-    //     using Message<Extraction> res = new(statusId, "OK", false);
-    //     await context.Response.Send(res.AsJsonString());
-    // }
+        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        using Message<Extraction> res = new(statusId, "OK", false);
+        await context.Response.Send(res.AsJsonString());
+    }
 }

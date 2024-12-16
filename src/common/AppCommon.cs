@@ -16,7 +16,7 @@ public static class AppCommon
 
     public const bool Fail = false;
 
-    public const string ProgramVersion = "0.0.2";
+    public const string ProgramVersion = "0.0.3";
 
     public const string ProgramName = "ITCentral";
 
@@ -47,6 +47,8 @@ public static class AppCommon
     public static int ProducerLineMax { get; private set; }
 
     public static int SessionTime { get; private set; }
+
+    public static int BulkCopyTimeout { get; private set; }
 
     public static int ConsumerAttemptMax { get; private set; }
 
@@ -86,6 +88,7 @@ public static class AppCommon
         { "MAX_CONSUMER_ATTEMPT", nameof(ConsumerAttemptMax) },
         { "MAX_PRODUCER_LINECOUNT", nameof(ProducerLineMax) },
         { "LDAP_SERVER", nameof(LdapServer) },
+        { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
 
     public static void ShowHelp()

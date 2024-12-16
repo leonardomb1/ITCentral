@@ -46,6 +46,8 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
     {
         try
         {
+            system.ConnectionString = Encryption.SymmetricEncryptAES256(system.ConnectionString, AppCommon.MasterKey);
+
             var insert = await Repository.InsertAsync(system);
             return AppCommon.Success;
         }
@@ -59,8 +61,9 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
     {
         try
         {
-            system.Id = id;
+            system.ConnectionString = Encryption.SymmetricEncryptAES256(system.ConnectionString, AppCommon.MasterKey);
 
+            system.Id = id;
             await Repository.UpdateAsync(system);
 
             return AppCommon.Success;

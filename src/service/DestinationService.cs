@@ -42,11 +42,14 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
     }
 
-    public async Task<Result<bool, Error>> Post(Destination Destination)
+    public async Task<Result<bool, Error>> Post(Destination destination)
     {
         try
         {
-            var insert = await Repository.InsertAsync(Destination);
+            destination.DbString = Encryption.SymmetricEncryptAES256(destination.DbString, AppCommon.MasterKey);
+
+
+            var insert = await Repository.InsertAsync(destination);
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -55,13 +58,14 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
     }
 
-    public async Task<Result<bool, Error>> Put(Destination Destination, int id)
+    public async Task<Result<bool, Error>> Put(Destination destination, int id)
     {
         try
         {
-            Destination.Id = id;
+            destination.DbString = Encryption.SymmetricEncryptAES256(destination.DbString, AppCommon.MasterKey);
+            destination.Id = id;
 
-            await Repository.UpdateAsync(Destination);
+            await Repository.UpdateAsync(destination);
 
             return AppCommon.Success;
         }

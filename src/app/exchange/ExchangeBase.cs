@@ -18,9 +18,10 @@ public abstract class ExchangeBase
             await Parallel.ForEachAsync(extractions, AppCommon.ParallelRule, async (e, t) =>
             {
                 bool hasData = true;
+                int curr = 0;
                 do
                 {
-                    var attempt = await FetchDataTable(e, t);
+                    var attempt = await FetchDataTable(e, curr, t);
                     if (!attempt.IsSuccessful)
                     {
                         errors.Add(attempt.Error);
@@ -28,6 +29,8 @@ public abstract class ExchangeBase
                     }
 
                     if (attempt.Value.Rows.Count > 0) hasData = false;
+
+                    curr += AppCommon.ProducerLineMax;
 
                     await channel.Writer.WriteAsync((attempt.Value, e), t);
                 } while (hasData);
@@ -114,7 +117,7 @@ public abstract class ExchangeBase
         return mergedTable;
     }
 
-    protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, CancellationToken token);
+    protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token);
 
     protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction info);
 }

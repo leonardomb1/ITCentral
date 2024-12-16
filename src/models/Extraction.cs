@@ -33,7 +33,7 @@ public class Extraction : IModel
     [Column, NotNull, JsonRequired]
     public string Type { get; set; } = "";
 
-    [Column, NotNull, JsonRequired]
+    [Column, Nullable]
     public string FileStructure { get; set; } = "";
 
     [Association(ThisKey = nameof(ScheduleId), OtherKey = nameof(Schedule.Id)), Nullable]

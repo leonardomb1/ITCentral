@@ -8,31 +8,55 @@ namespace ITCentral.App.Exchange;
 
 public abstract class DBExchange : ExchangeBase
 {
-    protected string? QueryNonLocking;
+    protected abstract string? QueryNonLocking();
 
-    protected string? QueryPagination;
+    protected abstract string? QueryPagination(int current);
 
-    protected abstract DbCommand CreateDbCommand(string query);
+    protected abstract DbCommand CreateDbCommand(string query, string conStr);
 
-    protected abstract Task<Result<int, Error>> BulkInsert(DataTable data, Extraction extraction);
+    protected abstract Task<Result<bool, Error>> BulkInsert(DataTable data, Extraction extraction);
 
-    protected override async Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, CancellationToken token)
+    protected override async Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token)
     {
         try
         {
-            using DbCommand command = CreateDbCommand(
-                $@"
-                    SELECT
-                        *
-                    FROM {extraction.Name} {QueryNonLocking ?? ""}
-                    {QueryPagination ?? ""}
-                "
-            );
+            List<DataTable> dataTables = [];
+            string[] suffixes = extraction.FileStructure.Split("|");
 
-            var select = await command.ExecuteReaderAsync(token);
+            await Parallel.ForEachAsync(suffixes, token, async (s, t) =>
+            {
+                string file = suffixes.Length == 0 ? extraction.Name : extraction.Name + s;
+                using DbCommand command = CreateDbCommand(
+                    $@"
+                        SELECT
+                            *
+                        FROM {extraction.Name} {QueryNonLocking() ?? ""}
+                        ORDER BY {extraction.IndexName} ASC
+                        {QueryPagination(current) ?? ""}
+                    ",
+                    extraction.Origin!.ConnectionString
+                );
 
-            DataTable data = new();
-            data.Load(select);
+                await command.Connection!.OpenAsync(token);
+
+                using var fetched = new DataTable();
+                var select = await command.ExecuteReaderAsync(t);
+                fetched.Load(select);
+
+                lock (dataTables)
+                {
+                    dataTables.Add(fetched);
+                }
+
+                await command.Connection!.CloseAsync();
+            });
+
+            DataTable data = dataTables[0].Clone();
+
+            foreach (var table in dataTables)
+            {
+                data.Merge(table, false, MissingSchemaAction.Ignore);
+            }
 
             return data;
         }
