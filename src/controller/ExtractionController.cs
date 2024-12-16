@@ -197,4 +197,37 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         using Message<Extraction> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
+
+    public async Task ExecuteExtractionById(HttpContextBase ctx)
+    {
+        short statusId;
+
+        if (!int.TryParse(ctx.Request.Url.Parameters["extractionId"], null, out int extractionId))
+        {
+            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            using Message<string> errMsg = new(statusId, "Bad Request", true);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;
+        }
+
+        using var extraction = new ExtractionService();
+        var extractions = await extraction.Get(extractionId);
+
+        extractions.Value!.Origin!.ConnectionString = Encryption.SymmetricDecryptAES256(extractions.Value!.Origin!.ConnectionString, AppCommon.MasterKey);
+        extractions.Value!.Destination!.DbString = Encryption.SymmetricDecryptAES256(extractions.Value!.Destination!.DbString, AppCommon.MasterKey);
+
+        var dBExchange = new MSSQLExchange();
+        var result = await dBExchange.ChannelParallelize([extractions.Value]);
+
+        if (!result.IsSuccessful)
+        {
+            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
+            using Message<Error> errMsg = new(statusId, "Extraction Failed", true, result.Error);
+            return;
+        }
+
+        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        using Message<Extraction> res = new(statusId, "OK", false);
+        await context.Response.Send(res.AsJsonString());
+    }
 }

@@ -28,7 +28,7 @@ public abstract class ExchangeBase
                         break;
                     }
 
-                    if (attempt.Value.Rows.Count > 0) hasData = false;
+                    if (attempt.Value.Rows.Count == 0) hasData = false;
 
                     curr += AppCommon.ProducerLineMax;
 
@@ -42,6 +42,7 @@ public abstract class ExchangeBase
         Task consumer = Task.Run(async () =>
         {
             Result<bool, Error> insert = new();
+            Result<bool, Error> create = new();
 
             while (await channel.Reader.WaitToReadAsync())
             {
@@ -68,6 +69,7 @@ public abstract class ExchangeBase
                     {
                         try
                         {
+                            create = await CreateTable(e.MergedTable, e.Extraction);
                             insert = await WriteDataTable(e.MergedTable, e.Extraction);
                         }
                         finally
@@ -75,7 +77,7 @@ public abstract class ExchangeBase
                             e.MergedTable.Dispose();
                         }
                     }
-                } while (!insert.IsSuccessful && attempt < AppCommon.ConsumerAttemptMax);
+                } while ((!insert.IsSuccessful) && attempt < AppCommon.ConsumerAttemptMax);
 
                 if (attempt > AppCommon.ConsumerAttemptMax)
                 {
@@ -120,4 +122,6 @@ public abstract class ExchangeBase
     protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token);
 
     protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction info);
+
+    protected abstract Task<Result<bool, Error>> CreateTable(DataTable table, Extraction extraction);
 }

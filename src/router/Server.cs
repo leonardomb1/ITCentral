@@ -74,6 +74,7 @@ public sealed class Server
         postAuth.Static.Add(WebMethod.GET, extraction, extractionController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.POST, extraction, extractionController.Post, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.GET, extraction + "/execute", extractionController.ExecuteExtraction, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, extraction + "/execute/id/{extractionId}", extractionController.ExecuteExtractionById, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.GET, extraction + "/id/{extractionId}", extractionController.GetById, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.PUT, extraction + "/id/{extractionId}", extractionController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, extraction + "/id/{extractionId}", extractionController.Delete, ErrorDefaultRoute);
