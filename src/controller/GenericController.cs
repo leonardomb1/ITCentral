@@ -36,7 +36,7 @@ public class GenericController : ControllerBase
 
         string sessionId = ctx.Request.Headers.Get("Authorization")!;
 
-        if (!SessionManager.IsSessionValid(sessionId))
+        if (!await SessionManager.IsSessionValid(sessionId))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);

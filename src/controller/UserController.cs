@@ -15,7 +15,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         short statusId;
 
         using var user = new UserService();
-        var result = user.Get();
+        var result = await user.Get();
 
         if (!result.IsSuccessful)
         {
@@ -50,7 +50,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         using var user = new UserService();
-        var result = user.Get(userId);
+        var result = await user.Get(userId);
 
         if (!result.IsSuccessful)
         {
@@ -79,7 +79,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         string name = ctx.Request.Url.Parameters["userName"]!;
 
         using var user = new UserService();
-        var result = user.Get(name);
+        var result = await user.Get(name);
 
         if (!result.IsSuccessful)
         {
@@ -116,7 +116,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         using var user = new UserService();
-        var userSecret = user.GetUserCredential(body.Value.Name!);
+        var userSecret = await user.GetUserCredential(body.Value.Name!);
 
         if (!userSecret.IsSuccessful)
         {
@@ -132,7 +132,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        string sessionId = SessionManager.CreateSession(ctx.Request.Source.IpAddress).sessionId;
+        var (sessionId, _) = await SessionManager.CreateSession(ctx.Request.Source.IpAddress);
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
         using Message<string> res = new(statusId, "OK", false, [sessionId]);
@@ -154,7 +154,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         using var user = new UserService();
-        var name = user.Get(body.Value.Name);
+        var name = await user.Get(body.Value.Name);
 
         if (!name.IsSuccessful)
         {
@@ -180,7 +180,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        string sessionId = SessionManager.CreateSession(ctx.Request.Source.IpAddress).sessionId;
+        var (sessionId, _) = await SessionManager.CreateSession(ctx.Request.Source.IpAddress);
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
         using Message<string> res = new(statusId, "OK", false, [sessionId]);
@@ -205,7 +205,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
 
         var encryptedUser = body.Value;
         encryptedUser.Password = Encryption.SymmetricEncryptAES256(body.Value.Password ?? "", AppCommon.MasterKey);
-        var result = user.Post(encryptedUser);
+        var result = await user.Post(encryptedUser);
 
         if (!result.IsSuccessful)
         {
@@ -241,7 +241,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         }
 
         using var user = new UserService();
-        var result = user.Put(body.Value, userId);
+        var result = await user.Put(body.Value, userId);
 
         if (!result.IsSuccessful)
         {
@@ -275,7 +275,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
 
 
         using var user = new UserService();
-        var result = user.Delete(userId);
+        var result = await user.Delete(userId);
 
         if (!result.IsSuccessful)
         {

@@ -1,5 +1,4 @@
 using System.Net;
-using ITCentral.App.Exchange;
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Service;
@@ -8,14 +7,14 @@ using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
-public class ExtractionController : ControllerBase, IController<HttpContextBase>
+public class DestinationController : ControllerBase, IController<HttpContextBase>
 {
     public async Task Get(HttpContextBase ctx)
     {
         short statusId;
 
-        using var extraction = new ExtractionService();
-        var result = await extraction.Get();
+        using var Destination = new DestinationService();
+        var result = await Destination.Get();
 
         if (!result.IsSuccessful)
         {
@@ -33,7 +32,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<Extraction> res = new(statusId, "OK", false, result.Value);
+        using Message<Destination> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -41,7 +40,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["extractionId"], null, out int extractionId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -49,8 +48,8 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var extraction = new ExtractionService();
-        var result = await extraction.Get(extractionId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Get(destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -68,7 +67,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<Extraction> res = new(statusId, "OK", false, [result.Value]);
+        using Message<Destination> res = new(statusId, "OK", false, [result.Value]);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -76,7 +75,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<Extraction>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Destination>(ctx.Request.DataAsString);
 
         if (!body.IsSuccessful)
         {
@@ -86,8 +85,8 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var extraction = new ExtractionService();
-        var result = await extraction.Post(body.Value);
+        using var Destination = new DestinationService();
+        var result = await Destination.Post(body.Value);
 
         if (!result.IsSuccessful)
         {
@@ -104,7 +103,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<Extraction>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Destination>(ctx.Request.DataAsString);
 
         if (!body.IsSuccessful)
         {
@@ -114,7 +113,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["extractionId"], null, out int extractionId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -122,8 +121,8 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var extraction = new ExtractionService();
-        var result = await extraction.Put(body.Value, extractionId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Put(body.Value, destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -139,7 +138,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<string> res = new(statusId, "OK", false);
+        using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -147,7 +146,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["extractionId"], null, out int extractionId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -155,8 +154,8 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        var extraction = new ExtractionService();
-        var result = await extraction.Delete(extractionId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Delete(destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -165,37 +164,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Extraction> res = new(statusId, "OK", false);
+        using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
-
-    // public async Task ExecuteExtraction(HttpContextBase ctx)
-    // {
-    //     short statusId;
-
-    //     using var extraction = new ExtractionService();
-    //     var extractions = extraction.Get();
-
-    //     var dBExchange = new DBExchange();
-    //     var result = dBExchange.FetchDataTable(extractions.Value[0], new CancellationToken());
-
-    //     if (!result.IsSuccessful)
-    //     {
-    //         await HandleInternalServerError(ctx, result.Error);
-    //         return;
-    //     }
-
-    //     if (result.Value == 0)
-    //     {
-    //         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-    //         using Message<string> errMsg = new(statusId, "No Result", false);
-    //         await context.Response.Send(errMsg.AsJsonString());
-    //         return;
-    //     }
-
-    //     statusId = BeginRequest(ctx, HttpStatusCode.OK);
-
-    //     using Message<Extraction> res = new(statusId, "OK", false);
-    //     await context.Response.Send(res.AsJsonString());
-    // }
 }

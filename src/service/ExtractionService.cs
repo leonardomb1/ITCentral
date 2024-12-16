@@ -11,20 +11,17 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
 
     public ExtractionService() : base() { }
 
-    public Result<List<Extraction>, Error> Get()
+    public async Task<Result<List<Extraction>, Error>> Get()
     {
         try
         {
             var select = from e in Repository.Extractions
-                         join sys in Repository.SystemMaps
-                            on e.SystemId equals sys.Id
-                         join sch in Repository.Schedules
-                            on e.ScheduleId equals sch.Id
-                         join db in Repository.Databases
-                            on e.DatabaseId equals db.Id
-                         select Extraction.Build(e, sys, sch, db);
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
+                         select e;
 
-            return select.ToList();
+            return await select.ToListAsync();
         }
         catch (Exception ex)
         {
@@ -32,21 +29,18 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public Result<Extraction?, Error> Get(int id)
+    public async Task<Result<Extraction?, Error>> Get(int id)
     {
         try
         {
             var select = from e in Repository.Extractions
-                         join sys in Repository.SystemMaps
-                           on e.SystemId equals sys.Id
-                         join sch in Repository.Schedules
-                           on e.ScheduleId equals sch.Id
-                         join db in Repository.Databases
-                            on e.DatabaseId equals db.Id
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
                          where e.Id == id
-                         select Extraction.Build(e, sys, sch, db);
+                         select e;
 
-            return select.FirstOrDefault();
+            return await select.FirstOrDefaultAsync();
         }
         catch (Exception ex)
         {
@@ -54,11 +48,11 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public Result<bool, Error> Post(Extraction extraction)
+    public async Task<Result<bool, Error>> Post(Extraction extraction)
     {
         try
         {
-            var insert = Repository.Insert(extraction);
+            var insert = await Repository.InsertAsync(extraction);
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -67,19 +61,13 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public Result<bool, Error> Put(Extraction extraction, int id)
+    public async Task<Result<bool, Error>> Put(Extraction extraction, int id)
     {
         try
         {
-            var check = from e in Repository.Extractions
-                        where e.Id == id
-                        select e.Id;
-
-            if (check is null) return AppCommon.Fail;
-
             extraction.Id = id;
 
-            Repository.Update(extraction);
+            await Repository.UpdateAsync(extraction);
 
             return AppCommon.Success;
         }
@@ -89,19 +77,13 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public Result<bool, Error> Delete(int id)
+    public async Task<Result<bool, Error>> Delete(int id)
     {
         try
         {
-            var check = from e in Repository.Extractions
-                        where e.Id == id
-                        select e.Id;
-
-            if (check is null) return AppCommon.Fail;
-
-            Repository.Extractions
+            await Repository.Extractions
                 .Where(e => e.Id == id)
-                .Delete();
+                .DeleteAsync();
 
             return AppCommon.Success;
         }

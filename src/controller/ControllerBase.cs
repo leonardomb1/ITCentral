@@ -6,18 +6,18 @@ using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
-public abstract class ControllerBase
+public class ControllerBase
 {
     protected static HttpContextBase context = new();
     protected static short BeginRequest(
-        HttpContextBase ctx, 
-        HttpStatusCode status, 
+        HttpContextBase ctx,
+        HttpStatusCode status,
         [CallerMemberName] string? method = null
     )
     {
-        short statusId = (short) status;
+        short statusId = (short)status;
         Log.Out(
-            $"{ctx.Request.Method} {statusId} - Received a request for {ctx.Request.Url.RawWithQuery} route.\n" + 
+            $"{ctx.Request.Method} {statusId} - Received a request for {ctx.Request.Url.RawWithQuery} route.\n" +
             $"  Source - IP: {ctx.Request.RetrieveHeaderValue("X-Forwarded-For")} " +
             $"Agent: {ctx.Request.Useragent}, Origin: {ctx.Request.RetrieveHeaderValue("Origin")}",
             AppCommon.MessageRequest

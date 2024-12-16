@@ -10,22 +10,24 @@ namespace ITCentral.Controller;
 public class ScheduleController : ControllerBase, IController<HttpContextBase>
 {
     public async Task Get(HttpContextBase ctx)
-    {       
+    {
         short statusId;
 
         using var schedule = new ScheduleService();
-        var result = schedule.Get();
+        var result = await schedule.Get();
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value is null) {
+        if (result.Value is null)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.OK);
             using Message<string> errMsg = new(statusId, "No Result", false);
             await context.Response.Send(errMsg.AsJsonString());
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
@@ -37,26 +39,29 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
         using var schedule = new ScheduleService();
-        var result = schedule.Get(scheduleId);
+        var result = await schedule.Get(scheduleId);
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value is null) {
+        if (result.Value is null)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.OK);
             using Message<string> msg = new(statusId, "No Result", false);
             await context.Response.Send(msg.AsJsonString());
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
@@ -70,7 +75,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
 
         var body = Converter.TryDeserializeJson<Schedule>(ctx.Request.DataAsString);
 
-        if(!body.IsSuccessful) {
+        if (!body.IsSuccessful)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
@@ -78,9 +84,10 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
         }
 
         using var schedule = new ScheduleService();
-        var result = schedule.Post(body.Value);
+        var result = await schedule.Post(body.Value);
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
@@ -95,32 +102,36 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
 
         var body = Converter.TryDeserializeJson<Schedule>(ctx.Request.DataAsString);
 
-        if(!body.IsSuccessful) {
+        if (!body.IsSuccessful)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
         using var schedule = new ScheduleService();
-        var result = schedule.Put(body.Value, scheduleId);
-        
-        if(!result.IsSuccessful) {
+        var result = await schedule.Put(body.Value, scheduleId);
+
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(!result.Value) {
+        if (!result.Value)
+        {
             _ = BeginRequest(ctx, HttpStatusCode.NoContent);
             await context.Response.Send("");
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
@@ -131,17 +142,19 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
         using var schedule = new ScheduleService();
-        var result = schedule.Delete(scheduleId);
-        
-        if(!result.IsSuccessful) {
+        var result = await schedule.Delete(scheduleId);
+
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }

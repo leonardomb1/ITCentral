@@ -8,88 +8,60 @@ namespace ITCentral.Service;
 public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
 {
     private readonly bool disposed = false;
-    
+
     public ScheduleService() : base() { }
-    
-    public Result<List<Schedule>, Error> Get()
+
+    public async Task<Result<List<Schedule>, Error>> Get()
     {
-        try 
+        try
         {
             var select = from s in Repository.Schedules
                          select s;
-            
-            return select.ToList();
-        } 
-        catch (Exception ex) 
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
-    public Result<Schedule?, Error> Get(int id)
+
+    public async Task<Result<Schedule?, Error>> Get(int id)
     {
-        try 
+        try
         {
             var select = from s in Repository.Schedules
                          where s.Id == id
                          select s;
-            
-            return select.FirstOrDefault();
-        } 
-        catch (Exception ex) 
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
+
+            return await select.FirstOrDefaultAsync();
         }
-    }
-    
-    public Result<bool, Error> Post(Schedule schedule)
-    {
-        try 
-        {
-            var insert = Repository.Insert(schedule);
-            return AppCommon.Success;
-        } 
         catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
-    public Result<bool, Error> Put(Schedule schedule, int id)
-    {
-        try 
-        {
-            var check = from s in Repository.Schedules
-                        where s.Id == id
-                        select s.Id;
-            
-            if (check is null) return AppCommon.Fail;
 
-            schedule.Id = id;
-
-            Repository.Update(schedule); 
-
-            return AppCommon.Success;
-        } 
-        catch (Exception ex) 
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-    
-    public Result<bool, Error> Delete(int id)
+    public async Task<Result<bool, Error>> Post(Schedule schedule)
     {
         try
         {
-            var check = from s in Repository.Schedules
-                        where s.Id == id
-                        select s.Id;
-            
-            if (check is null) return AppCommon.Fail;
+            var insert = await Repository.InsertAsync(schedule);
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
 
-            Repository.Schedules
-                .Where(s => s.Id == id)
-                .Delete();
+    public async Task<Result<bool, Error>> Put(Schedule schedule, int id)
+    {
+        try
+        {
+            schedule.Id = id;
+
+            await Repository.UpdateAsync(schedule);
 
             return AppCommon.Success;
         }
@@ -98,7 +70,23 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
+
+    public async Task<Result<bool, Error>> Delete(int id)
+    {
+        try
+        {
+            await Repository.Schedules
+                .Where(s => s.Id == id)
+                .DeleteAsync();
+
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
     public void Dispose()
     {
         Dispose(true);

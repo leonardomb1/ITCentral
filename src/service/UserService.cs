@@ -8,65 +8,65 @@ namespace ITCentral.Service;
 public class UserService : ServiceBase, IService<User, int>, IDisposable
 {
     private readonly bool disposed = false;
-    
+
     public UserService() : base() { }
-    
-    public Result<List<User>, Error> Get()
+
+    public async Task<Result<List<User>, Error>> Get()
     {
-        try 
+        try
         {
             var select = from u in Repository.Users
                          select u;
-            
-            select.ForEachAsync(u => u.Password = null);
 
-            return select.ToList();
-        } 
-        catch (Exception ex) 
+            foreach (var u in select) u.Password = null;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
-    public Result<User?, Error> Get(int id)
+
+    public async Task<Result<User?, Error>> Get(int id)
     {
-        try 
+        try
         {
             var select = from u in Repository.Users
                          where u.Id == id
                          select u;
 
-            select.ForEachAsync(u => u.Password = null);
-            
-            return select.FirstOrDefault();
-        } 
-        catch (Exception ex) 
+            foreach (var u in select) u.Password = null;
+
+            return await select.FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
-    public Result<List<User>, Error> Get(string name)
+
+    public async Task<Result<List<User>, Error>> Get(string name)
     {
-        try 
+        try
         {
             var select = from u in Repository.Users
                          where u.Name == name
                          select u;
-            
-            select.ForEachAsync(u => u.Password = null);
-            
-            return select.ToList();
-        } 
-        catch (Exception ex) 
+
+            foreach (var u in select) u.Password = null;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
-    public Result<string, Error> GetUserCredential(string userName)
+
+    public async Task<Result<string, Error>> GetUserCredential(string userName)
     {
-        var search = Get(userName);
+        var search = await Get(userName);
         if (!search.IsSuccessful)
         {
             return search.Error;
@@ -81,61 +81,33 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
 
         return Encryption.SymmetricDecryptAES256(user?.Password ?? "", AppCommon.MasterKey);
     }
-    
-    public Result<bool, Error> Post(User user)
+
+    public async Task<Result<bool, Error>> Post(User user)
     {
         User encryptedUser = user;
         Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
 
-        try 
-        {
-            var insert = Repository.Insert(encryptedUser);
-            return AppCommon.Success;
-        } 
-        catch (Exception ex) 
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-    
-    public Result<bool, Error> Put(User user, int id)
-    {
-        User encryptedUser = user;
-        Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
-
-        try 
-        {
-            var check = from u in Repository.Users
-                        where u.Id == id
-                        select u.Id;
-            
-            if (check is null) return AppCommon.Fail;
-
-            user.Id = id;
-
-            Repository.Update(user); 
-
-            return AppCommon.Success;
-        } 
-        catch (Exception ex) 
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-    
-    public Result<bool, Error> Delete(int id)
-    {
         try
         {
-            var check = from u in Repository.Users
-                        where u.Id == id
-                        select u.Id;
-            
-            if (check is null) return AppCommon.Fail;
+            var insert = await Repository.InsertAsync(encryptedUser);
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
 
-            Repository.Users
-                .Where(u => u.Id == id)
-                .Delete();
+    public async Task<Result<bool, Error>> Put(User user, int id)
+    {
+        User encryptedUser = user;
+        Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
+
+        try
+        {
+            user.Id = id;
+
+            await Repository.UpdateAsync(user);
 
             return AppCommon.Success;
         }
@@ -144,7 +116,23 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
+
+    public async Task<Result<bool, Error>> Delete(int id)
+    {
+        try
+        {
+            await Repository.Users
+                .Where(u => u.Id == id)
+                .DeleteAsync();
+
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
     public void Dispose()
     {
         Dispose(true);

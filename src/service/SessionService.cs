@@ -8,10 +8,10 @@ namespace ITCentral.Service;
 public class SessionService : ServiceBase, IDisposable
 {
     private readonly bool disposed = false;
-    
-    public SessionService() : base() {}
-    
-    public Result<Session?, Error> GetSession(string sessionId)
+
+    public SessionService() : base() { }
+
+    public async Task<Result<Session?, Error>> GetSession(string sessionId)
     {
         try
         {
@@ -19,7 +19,7 @@ public class SessionService : ServiceBase, IDisposable
                           where s.SessionId == sessionId
                           select s;
 
-            return session.FirstOrDefault();
+            return await session.FirstOrDefaultAsync();
 
         }
         catch (Exception ex)
@@ -28,11 +28,11 @@ public class SessionService : ServiceBase, IDisposable
         }
     }
 
-    public Result<bool, Error> Create(string sessionId, DateTime expiration)
+    public async Task<Result<bool, Error>> Create(string sessionId, DateTime expiration)
     {
         try
         {
-            var insert = Repository.Insert(new Session(sessionId, expiration));
+            var insert = await Repository.InsertAsync(new Session(sessionId, expiration));
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -41,19 +41,13 @@ public class SessionService : ServiceBase, IDisposable
         }
     }
 
-    public Result<bool, Error> Delete(string sessionId)
+    public async Task<Result<bool, Error>> Delete(string sessionId)
     {
         try
         {
-            var check = from s in Repository.Sessions
-                        where s.SessionId == sessionId
-                        select s.SessionId;
-            
-            if (check is null) return AppCommon.Fail;
-
-            Repository.Sessions
+            await Repository.Sessions
                 .Where(s => s.SessionId == sessionId)
-                .Delete();
+                .DeleteAsync();
 
             return AppCommon.Success;
         }
@@ -62,7 +56,7 @@ public class SessionService : ServiceBase, IDisposable
             return new Error(ex.Message, ex.StackTrace, false);
         }
     }
-    
+
     public void Dispose()
     {
         Dispose(true);

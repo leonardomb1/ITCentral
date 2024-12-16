@@ -5,6 +5,7 @@ using ITCentral.Router;
 using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.Mapping;
+using YamlDotNet.Core.Tokens;
 using YamlDotNet.RepresentationModel;
 
 namespace ITCentral.Common;
@@ -37,7 +38,9 @@ public static class AppCommon
 
     public static int LogDumpTime { get; private set; }
 
-    public static int MaxDegreeParallel { get; private set; }
+    public static int MaxDegreeParallel { get; set; }
+
+    public static ParallelOptions ParallelRule => new() { MaxDegreeOfParallelism = MaxDegreeParallel };
 
     public static int ConsumerFetchMax { get; private set; }
 
@@ -283,6 +286,7 @@ public static class AppCommon
                 }
             }
         }
+
 
         InitializeDb();
         Server server = new();

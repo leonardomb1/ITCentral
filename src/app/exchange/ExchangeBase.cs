@@ -8,25 +8,29 @@ namespace ITCentral.App.Exchange;
 
 public abstract class ExchangeBase
 {
-    public async Task<Error[]> ChannelParallelize(int max, List<Extraction> extractions)
+    public async Task<Result<bool, List<Error>>> ChannelParallelize(List<Extraction> extractions)
     {
-        Channel<DataTable> channel = Channel.CreateBounded<DataTable>(AppCommon.MaxDegreeParallel);
-        ParallelOptions options = new()
-        {
-            MaxDegreeOfParallelism = AppCommon.MaxDegreeParallel
-        };
-        Error[] errors = [];
+        Channel<(DataTable, Extraction)> channel = Channel.CreateBounded<(DataTable, Extraction)>(AppCommon.MaxDegreeParallel);
+        List<Error> errors = [];
 
         Task producer = Task.Run(async () =>
         {
-            await Parallel.ForAsync(1, max + 1, async (int i, CancellationToken c) =>
+            await Parallel.ForEachAsync(extractions, AppCommon.ParallelRule, async (e, t) =>
             {
-                var produced = await FetchDataTable(extractions[i], c);
-                if (!produced.IsSuccessful)
+                bool hasData = true;
+                do
                 {
-                    _ = errors.Append(produced.Error);
-                }
-                await channel.Writer.WriteAsync(produced.Value, c);
+                    var attempt = await FetchDataTable(e, t);
+                    if (!attempt.IsSuccessful)
+                    {
+                        errors.Add(attempt.Error);
+                        break;
+                    }
+
+                    if (attempt.Value.Rows.Count > 0) hasData = false;
+
+                    await channel.Writer.WriteAsync((attempt.Value, e), t);
+                } while (hasData);
             });
 
             channel.Writer.Complete();
@@ -34,37 +38,83 @@ public abstract class ExchangeBase
 
         Task consumer = Task.Run(async () =>
         {
-            int attempt = 0;
             Result<bool, Error> insert = new();
 
             while (await channel.Reader.WaitToReadAsync())
             {
-                using DataTable groupTable = new();
+                int attempt = 0;
+                List<(DataTable, Extraction)> fetchedData = [];
 
-                for (int i = 0; i < AppCommon.ConsumerFetchMax && channel.Reader.TryRead(out DataTable? item); i++)
+                for (int i = 0; i < AppCommon.ConsumerFetchMax && channel.Reader.TryRead(out (DataTable, Extraction) item); i++)
                 {
-                    groupTable.Merge(item);
-                    item.Dispose();
+                    fetchedData.Add(item);
                 }
+
+                var groupedData = fetchedData
+                    .GroupBy(e => e.Item2)
+                    .Select(group =>
+                    {
+                        using var mergedTable = MergeDataTables(group.Select(x => x.Item1).ToList());
+                        return (MergedTable: mergedTable, Extraction: group.Key);
+                    }).ToList();
 
                 do
                 {
                     attempt++;
-                    insert = await WriteDataTable(groupTable);
+                    foreach (var e in groupedData)
+                    {
+                        try
+                        {
+                            insert = await WriteDataTable(e.MergedTable, e.Extraction);
+                        }
+                        finally
+                        {
+                            e.MergedTable.Dispose();
+                        }
+                    }
                 } while (!insert.IsSuccessful && attempt < AppCommon.ConsumerAttemptMax);
-            }
 
-            if (attempt < AppCommon.ConsumerAttemptMax)
-            {
-                _ = errors.Append(new Error("Maximum attempts reached", null, false));
+                if (attempt > AppCommon.ConsumerAttemptMax)
+                {
+                    errors.Add(insert.Error!);
+                }
             }
         });
 
         await Task.WhenAll(producer, consumer);
 
-        return errors;
+        return AppCommon.Success;
+    }
+
+    protected static DataTable MergeDataTables(List<DataTable> tables)
+    {
+        if (tables == null || tables.Count == 0)
+            throw new ArgumentException("No tables to merge.");
+
+        DataTable mergedTable = tables[0].Clone();
+
+        try
+        {
+            foreach (var table in tables)
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    mergedTable.ImportRow(row);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var table in tables)
+            {
+                table.Dispose();
+            }
+        }
+
+        return mergedTable;
     }
 
     protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, CancellationToken token);
-    protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table);
+
+    protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction info);
 }

@@ -41,14 +41,14 @@ public sealed class Server
         postAuth.Parameter.Add(WebMethod.PUT, users + "/id/{userId}", userController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, users + "/id/{userId}", userController.Delete, ErrorDefaultRoute);
 
-        // SystemMap model routes
-        var systemMapController = new SystemMapController();
-        string system = root + "/systems";
-        postAuth.Static.Add(WebMethod.GET, system, systemMapController.Get, ErrorDefaultRoute);
-        postAuth.Static.Add(WebMethod.POST, system, systemMapController.Post, ErrorDefaultRoute);
-        postAuth.Parameter.Add(WebMethod.GET, system + "/id/{systemId}", systemMapController.GetById, ErrorDefaultRoute);
-        postAuth.Parameter.Add(WebMethod.PUT, system + "/id/{systemId}", systemMapController.Put, ErrorDefaultRoute);
-        postAuth.Parameter.Add(WebMethod.DELETE, system + "/id/{systemId}", systemMapController.Delete, ErrorDefaultRoute);
+        // Origin model routes
+        var originController = new OriginController();
+        string origin = root + "/origins";
+        postAuth.Static.Add(WebMethod.GET, origin, originController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, origin, originController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, origin + "/id/{originId}", originController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, origin + "/id/{originId}", originController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, origin + "/id/{originId}", originController.Delete, ErrorDefaultRoute);
 
         // Schedule model routes
         var scheduleController = new ScheduleController();
@@ -59,12 +59,21 @@ public sealed class Server
         postAuth.Parameter.Add(WebMethod.PUT, schedule + "/id/{scheduleId}", scheduleController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, schedule + "/id/{scheduleId}", scheduleController.Delete, ErrorDefaultRoute);
 
+        // Schedule model routes
+        var destinationController = new DestinationController();
+        string destination = root + "/destinations";
+        postAuth.Static.Add(WebMethod.GET, destination, destinationController.Get, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.POST, destination, destinationController.Post, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, destination + "/id/{destinationId}", destinationController.GetById, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.PUT, destination + "/id/{destinationId}", destinationController.Put, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.DELETE, destination + "/id/{destinationId}", destinationController.Delete, ErrorDefaultRoute);
+
         // Extraction model routes
         var extractionController = new ExtractionController();
         string extraction = root + "/extractions";
         postAuth.Static.Add(WebMethod.GET, extraction, extractionController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.POST, extraction, extractionController.Post, ErrorDefaultRoute);
-        postAuth.Static.Add(WebMethod.GET, extraction + "/execute", extractionController.ExecuteExtraction, ErrorDefaultRoute);
+        // postAuth.Static.Add(WebMethod.GET, extraction + "/execute", extractionController.ExecuteExtraction, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.GET, extraction + "/id/{extractionId}", extractionController.GetById, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.PUT, extraction + "/id/{extractionId}", extractionController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, extraction + "/id/{extractionId}", extractionController.Delete, ErrorDefaultRoute);

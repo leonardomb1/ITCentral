@@ -1,45 +1,52 @@
 using System.Data;
+using System.Data.Common;
+using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
-using LinqToDB.Data;
-using LinqToDB.SchemaProvider;
 
 namespace ITCentral.App.Exchange;
 
-public class DBExchange
+public abstract class DBExchange : ExchangeBase
 {
-    public Result<int, Error> FetchDataTable(Extraction extraction, CancellationToken token)
+    protected string? QueryNonLocking;
+
+    protected string? QueryPagination;
+
+    protected abstract DbCommand CreateDbCommand(string query);
+
+    protected abstract Task<Result<int, Error>> BulkInsert(DataTable data, Extraction extraction);
+
+    protected override async Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, CancellationToken token)
     {
         try
         {
-            if (extraction.System == null)
-            {
-                return new Error("Invalid configuration for extraction.", null, false);
-            }
+            using DbCommand command = CreateDbCommand(
+                $@"
+                    SELECT
+                        *
+                    FROM {extraction.Name} {QueryNonLocking ?? ""}
+                    {QueryPagination ?? ""}
+                "
+            );
 
-            using DataConnection DBCall = new(extraction.System.DatabaseType, extraction.System.ConnectionString);
+            var select = await command.ExecuteReaderAsync(token);
 
-            var tables = DBCall
-                .DataProvider
-                .GetSchemaProvider()
-                .GetSchema(DBCall, new GetSchemaOptions() { })
-                .Tables
-                .Where(table =>
-                {
-                    return table.TableName!.Contains(extraction.Name);
-                });
+            DataTable data = new();
+            data.Load(select);
 
-            foreach (var table in tables)
-            {
-                Console.WriteLine(table.TableName);
-            }
-
-            return 1;
+            return data;
         }
         catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
-            throw;
         }
+    }
+
+    protected override async Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction extraction)
+    {
+        var insert = await BulkInsert(table, extraction);
+        if (!insert.IsSuccessful) return insert.Error;
+
+        return AppCommon.Success;
     }
 }

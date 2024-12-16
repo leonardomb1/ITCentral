@@ -7,80 +7,87 @@ using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
-public class SystemMapController : ControllerBase, IController<HttpContextBase>
+public class OriginController : ControllerBase, IController<HttpContextBase>
 {
     public async Task Get(HttpContextBase ctx)
-    {       
+    {
         short statusId;
 
-        using var systemMap = new SystemMapService();
-        var result = systemMap.Get();
+        using var Origin = new OriginService();
+        var result = await Origin.Get();
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value is null) {
+        if (result.Value is null)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.OK);
             using Message<string> errMsg = new(statusId, "No Result", false);
             await context.Response.Send(errMsg.AsJsonString());
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<SystemMap> res = new(statusId, "OK", false, result.Value);
+        using Message<Origin> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task GetById(HttpContextBase ctx)
     {
         short statusId;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["systemId"], null, out int systemId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["originId"], null, out int originId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
-        using var systemMap = new SystemMapService();
-        var result = systemMap.Get(systemId);
+        using var Origin = new OriginService();
+        var result = await Origin.Get(originId);
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(result.Value is null) {
+        if (result.Value is null)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.OK);
             using Message<string> msg = new(statusId, "No Result", false);
             await context.Response.Send(msg.AsJsonString());
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<SystemMap> res = new(statusId, "OK", false, [result.Value]);
+        using Message<Origin> res = new(statusId, "OK", false, [result.Value]);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Post(HttpContextBase ctx)
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<SystemMap>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Origin>(ctx.Request.DataAsString);
 
-        if(!body.IsSuccessful) {
+        if (!body.IsSuccessful)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
-        using var systemMap = new SystemMapService();
-        var result = systemMap.Post(body.Value);
+        using var Origin = new OriginService();
+        var result = await Origin.Post(body.Value);
 
-        if(!result.IsSuccessful) {
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
@@ -93,61 +100,67 @@ public class SystemMapController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<SystemMap>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Origin>(ctx.Request.DataAsString);
 
-        if(!body.IsSuccessful) {
+        if (!body.IsSuccessful)
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["systemId"], null, out int systemId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["originId"], null, out int originId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
-        using var systemMap = new SystemMapService();
-        var result = systemMap.Put(body.Value, systemId);
-        
-        if(!result.IsSuccessful) {
+        using var Origin = new OriginService();
+        var result = await Origin.Put(body.Value, originId);
+
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
-        if(!result.Value) {
+        if (!result.Value)
+        {
             _ = BeginRequest(ctx, HttpStatusCode.NoContent);
             await context.Response.Send("");
-            return;           
+            return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<SystemMap> res = new(statusId, "OK", false);
+        using Message<Origin> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
     public async Task Delete(HttpContextBase ctx)
     {
         short statusId;
 
-        if(!int.TryParse(ctx.Request.Url.Parameters["systemId"], null, out int systemId)) {
+        if (!int.TryParse(ctx.Request.Url.Parameters["originId"], null, out int originId))
+        {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
-        } 
+        }
 
-        using var systemMap = new SystemMapService();
-        var result = systemMap.Delete(systemId);
-        
-        if(!result.IsSuccessful) {
+        using var Origin = new OriginService();
+        var result = await Origin.Delete(originId);
+
+        if (!result.IsSuccessful)
+        {
             await HandleInternalServerError(ctx, result.Error);
             return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<SystemMap> res = new(statusId, "OK", false);
+        using Message<Origin> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 }

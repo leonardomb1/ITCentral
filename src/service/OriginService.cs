@@ -2,24 +2,23 @@ using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
 using LinqToDB;
-using LinqToDB.Data;
 
 namespace ITCentral.Service;
 
-public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposable
+public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
 {
     private readonly bool disposed = false;
 
-    public DatabaseService() : base() { }
+    public OriginService() : base() { }
 
-    public Result<List<SystemMap>, Error> Get()
+    public async Task<Result<List<Origin>, Error>> Get()
     {
         try
         {
-            var select = from db in Repository.Databases
-                         select db;
+            var select = from s in Repository.Origins
+                         select s;
 
-            return select.ToList();
+            return await select.ToListAsync();
         }
         catch (Exception ex)
         {
@@ -27,15 +26,15 @@ public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposabl
         }
     }
 
-    public Result<SystemMap?, Error> Get(int id)
+    public async Task<Result<Origin?, Error>> Get(int id)
     {
         try
         {
-            var select = from s in Repository.Databases
+            var select = from s in Repository.Origins
                          where s.Id == id
                          select s;
 
-            return select.FirstOrDefault();
+            return await select.FirstOrDefaultAsync();
         }
         catch (Exception ex)
         {
@@ -43,11 +42,11 @@ public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposabl
         }
     }
 
-    public Result<bool, Error> Post(SystemMap system)
+    public async Task<Result<bool, Error>> Post(Origin system)
     {
         try
         {
-            var insert = Repository.Insert(system);
+            var insert = await Repository.InsertAsync(system);
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -56,19 +55,13 @@ public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposabl
         }
     }
 
-    public Result<bool, Error> Put(SystemMap system, int id)
+    public async Task<Result<bool, Error>> Put(Origin system, int id)
     {
         try
         {
-            var check = from s in Repository.Databases
-                        where s.Id == id
-                        select s.Id;
-
-            if (check is null) return AppCommon.Fail;
-
             system.Id = id;
 
-            Repository.Update(system);
+            await Repository.UpdateAsync(system);
 
             return AppCommon.Success;
         }
@@ -78,19 +71,13 @@ public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposabl
         }
     }
 
-    public Result<bool, Error> Delete(int id)
+    public async Task<Result<bool, Error>> Delete(int id)
     {
         try
         {
-            var check = from s in Repository.Databases
-                        where s.Id == id
-                        select s.Id;
-
-            if (check is null) return AppCommon.Fail;
-
-            Repository.Databases
+            await Repository.Origins
                 .Where(s => s.Id == id)
-                .Delete();
+                .DeleteAsync();
 
             return AppCommon.Success;
         }
@@ -114,7 +101,7 @@ public class DatabaseService : ServiceBase, IService<SystemMap, int>, IDisposabl
         }
     }
 
-    ~SystemMapService()
+    ~OriginService()
     {
         Dispose(false);
     }

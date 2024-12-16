@@ -2,24 +2,23 @@ using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
 using LinqToDB;
-using LinqToDB.Data;
 
 namespace ITCentral.Service;
 
-public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposable
+public class DestinationService : ServiceBase, IService<Destination, int>, IDisposable
 {
     private readonly bool disposed = false;
 
-    public SystemMapService() : base() { }
+    public DestinationService() : base() { }
 
-    public Result<List<SystemMap>, Error> Get()
+    public async Task<Result<List<Destination>, Error>> Get()
     {
         try
         {
-            var select = from s in Repository.SystemMaps
-                         select s;
+            var select = from db in Repository.Destinations
+                         select db;
 
-            return select.ToList();
+            return await select.ToListAsync();
         }
         catch (Exception ex)
         {
@@ -27,15 +26,15 @@ public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposab
         }
     }
 
-    public Result<SystemMap?, Error> Get(int id)
+    public async Task<Result<Destination?, Error>> Get(int id)
     {
         try
         {
-            var select = from s in Repository.SystemMaps
-                         where s.Id == id
-                         select s;
+            var select = from db in Repository.Destinations
+                         where db.Id == id
+                         select db;
 
-            return select.FirstOrDefault();
+            return await select.FirstOrDefaultAsync();
         }
         catch (Exception ex)
         {
@@ -43,11 +42,11 @@ public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposab
         }
     }
 
-    public Result<bool, Error> Post(SystemMap system)
+    public async Task<Result<bool, Error>> Post(Destination Destination)
     {
         try
         {
-            var insert = Repository.Insert(system);
+            var insert = await Repository.InsertAsync(Destination);
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -56,19 +55,13 @@ public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposab
         }
     }
 
-    public Result<bool, Error> Put(SystemMap system, int id)
+    public async Task<Result<bool, Error>> Put(Destination Destination, int id)
     {
         try
         {
-            var check = from s in Repository.SystemMaps
-                        where s.Id == id
-                        select s.Id;
+            Destination.Id = id;
 
-            if (check is null) return AppCommon.Fail;
-
-            system.Id = id;
-
-            Repository.Update(system);
+            await Repository.UpdateAsync(Destination);
 
             return AppCommon.Success;
         }
@@ -78,19 +71,13 @@ public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposab
         }
     }
 
-    public Result<bool, Error> Delete(int id)
+    public async Task<Result<bool, Error>> Delete(int id)
     {
         try
         {
-            var check = from s in Repository.SystemMaps
-                        where s.Id == id
-                        select s.Id;
-
-            if (check is null) return AppCommon.Fail;
-
-            Repository.SystemMaps
-                .Where(s => s.Id == id)
-                .Delete();
+            await Repository.Destinations
+                .Where(db => db.Id == id)
+                .DeleteAsync();
 
             return AppCommon.Success;
         }
@@ -114,7 +101,7 @@ public class SystemMapService : ServiceBase, IService<SystemMap, int>, IDisposab
         }
     }
 
-    ~SystemMapService()
+    ~DestinationService()
     {
         Dispose(false);
     }
