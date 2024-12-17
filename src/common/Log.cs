@@ -1,19 +1,23 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using ITCentral.Models;
+using ITCentral.Service;
 
 namespace ITCentral.Common;
 
 public static class Log
 {
-    private static readonly ConcurrentQueue<string> logQueue = new();
-    
+    private static readonly ConcurrentQueue<Record> logs = [];
+
     private static readonly string hostname = Environment.MachineName;
-    
-    private static string LogPrefix() => $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss:fff}]::";
+
+    private static string LogPrefix(DateTime time) => $"[{time:yyyy-MM-dd HH:mm:ss:fff}]::";
+
+    private static readonly Lazy<Timer> logTimer = new(() => new Timer(async _ => await DumpLogsToFile(null), null, AppCommon.LogDumpTime, AppCommon.LogDumpTime));
 
     static Log()
     {
-        _ = new Timer(DumpLogsToFile, null, AppCommon.LogDumpTime, AppCommon.LogDumpTime);
+        _ = logTimer.Value;
     }
 
     public static void Out(
@@ -21,30 +25,40 @@ public static class Log
         string? logType = null,
         bool dump = true,
         [CallerMemberName] string? callerMethod = null
-    ) {
+    )
+    {
+        DateTime executionTime = DateTime.Now;
         string type = logType ?? AppCommon.MessageInfo;
-        string log = LogPrefix() + $"[{callerMethod}]::[{type}] > {message}";
+        string log = LogPrefix(executionTime) + $"[{callerMethod}]::[{type}] > {message}";
+
         Console.WriteLine(log);
-        if(dump && AppCommon.Logging) logQueue.Enqueue(log);
+
+        if (dump && AppCommon.Logging)
+        {
+            Record record = new(hostname, executionTime, type, callerMethod ?? "", message);
+            logs.Enqueue(record);
+        }
     }
 
-    private static void DumpLogsToFile(object? state)
+    private static async Task DumpLogsToFile(object? state)
     {
+        if (logs.IsEmpty) return;
         Out("Log dump routine started.", dump: false);
-        if (logQueue.IsEmpty) return;
 
-        using var writer = new StreamWriter(AppCommon.LogFilePath, true);
+        using var recordService = new RecordService();
+
         try
         {
-            while (logQueue.TryDequeue(out var logEntry))
+            var recordsToDump = new List<Record>();
+            while (logs.TryDequeue(out var record))
             {
-                writer.WriteLine($"[{hostname}] - {logEntry}");
+                recordsToDump.Add(record);
             }
-            writer.Flush();
+            await recordService.Post(recordsToDump);
         }
         catch (Exception ex)
         {
-            Out($"Error while executing log dump routing: {ex.Message}", AppCommon.MessageError);
+            Out($"Error while executing log dump routing: {ex.Message}", AppCommon.MessageError, dump: false);
         }
     }
 }

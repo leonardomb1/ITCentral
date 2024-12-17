@@ -79,6 +79,13 @@ public sealed class Server
         postAuth.Parameter.Add(WebMethod.PUT, extraction + "/{extractionId}", extractionController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, extraction + "/{extractionId}", extractionController.Delete, ErrorDefaultRoute);
 
+        // Record model routes
+        var recordController = new RecordController();
+        string record = root + "/records";
+        postAuth.Static.Add(WebMethod.GET, record + "/count", recordController.GetCount, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.GET, record, recordController.GetLast, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.DELETE, record, recordController.Clear, ErrorDefaultRoute);
+
         // Authentication
         service.Routes.AuthenticateRequest = Authenticate;
     }

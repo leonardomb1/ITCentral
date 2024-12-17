@@ -33,8 +33,6 @@ public static class AppCommon
 
     public const int StructuredDifferentFiles = 2;
 
-    public static string LogFilePath { get; private set; } = "";
-
     public static int LogDumpTime { get; private set; }
 
     public static int MaxDegreeParallel { get; set; }
@@ -61,6 +59,8 @@ public static class AppCommon
 
     public static bool Ssl { get; private set; }
 
+    public static bool LdapSsl { get; private set; }
+
     public static string HostName { get; private set; } = "";
 
     public static string DbType { get; private set; } = "";
@@ -86,7 +86,6 @@ public static class AppCommon
         { "HOST_NAME", nameof(HostName) },
         { "ENABLE_LOG_DUMP", nameof(Logging) },
         { "LOG_DUMP_TIME", nameof(LogDumpTime) },
-        { "LOG_FILE_PATH", nameof(LogFilePath) },
         { "ENCRYPT_KEY", nameof(MasterKey) },
         { "SESSION_TIME", nameof(SessionTime) },
         { "API_KEY", nameof(ApiKey) },
@@ -99,6 +98,7 @@ public static class AppCommon
         { "LDAP_PORT", nameof(LdapPort) },
         { "LDAP_BASEDN", nameof(LdapBaseDn) },
         { "LDAP_GROUPS", nameof(LdapGroup) },
+        { "LDAP_SSL", nameof(LdapSsl) },
         { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
 

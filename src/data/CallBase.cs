@@ -21,6 +21,8 @@ public class CallBase : DataConnection
 
     public ITable<Destination> Destinations => this.GetTable<Destination>();
 
+    public ITable<Record> Records => this.GetTable<Record>();
+
     public bool Exists(string tableName)
     {
         var schemaProvider = DataProvider.GetSchemaProvider();

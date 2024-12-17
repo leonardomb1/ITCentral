@@ -12,12 +12,15 @@ public static class LdapAuth
         try
         {
             var credential = new NetworkCredential(username, password, AppCommon.LdapDomain);
-            using var connection = new LdapConnection(new LdapDirectoryIdentifier(AppCommon.LdapServer, AppCommon.LdapPort))
-            {
-                Credential = credential,
-                AuthType = AuthType.Basic
-            };
-            connection.SessionOptions.SecureSocketLayer = true;
+            var identifier = new LdapDirectoryIdentifier("");
+            using var connection = new LdapConnection("ldap://10.247.81.10:389");
+
+            connection.AuthType = AuthType.Basic;
+            connection.Credential = credential;
+
+            connection.SessionOptions.SecureSocketLayer = AppCommon.LdapSsl;
+
+            connection.Bind();
 
             string[] groups = AppCommon.LdapGroup.Split("|");
             StringBuilder stringBuilder = new();
@@ -31,7 +34,6 @@ public static class LdapAuth
 
             stringBuilder.Append("))");
 
-            connection.Bind();
 
             var searchRequest = new SearchRequest(
                 AppCommon.LdapBaseDn,
