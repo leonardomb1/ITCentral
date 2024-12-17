@@ -12,6 +12,7 @@ public class ControllerBase
     protected static short BeginRequest(
         HttpContextBase ctx,
         HttpStatusCode status,
+        bool dumpLog = true,
         [CallerMemberName] string? method = null
     )
     {
@@ -20,7 +21,8 @@ public class ControllerBase
             $"{ctx.Request.Method} {statusId} - Received a request for {ctx.Request.Url.RawWithQuery} route.\n" +
             $"  Source - IP: {ctx.Request.RetrieveHeaderValue("X-Forwarded-For")} " +
             $"Agent: {ctx.Request.Useragent}, Origin: {ctx.Request.RetrieveHeaderValue("Origin")}",
-            AppCommon.MessageRequest
+            AppCommon.MessageRequest,
+            dump: dumpLog
         );
 
         context = ctx;
