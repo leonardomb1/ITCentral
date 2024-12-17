@@ -153,16 +153,9 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var user = new UserService();
-        var name = await user.Get(body.Value.Name);
+        var ldapSearch = LdapAuth.AuthenticateUser(body.Value.Name, body.Value.Password!);
 
-        if (!name.IsSuccessful)
-        {
-            await HandleInternalServerError(ctx, name.Error);
-            return;
-        }
-
-        if (name.Value is null || name.Value.Count == 0)
+        if (!ldapSearch.IsSuccessful)
         {
             statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);
@@ -170,9 +163,7 @@ public class UserController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        var ldapSearch = LdapAuth.AuthenticateUser(body.Value.Name, body.Value.Password!);
-
-        if (!ldapSearch.IsSuccessful)
+        if (!ldapSearch.Value)
         {
             statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
             using Message<string> errMsg = new(statusId, "Unauthorized", true);

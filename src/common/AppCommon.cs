@@ -5,7 +5,6 @@ using ITCentral.Router;
 using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.Mapping;
-using YamlDotNet.Core.Tokens;
 using YamlDotNet.RepresentationModel;
 
 namespace ITCentral.Common;
@@ -56,6 +55,8 @@ public static class AppCommon
 
     public static int PortNumber { get; private set; }
 
+    public static int LdapPort { get; private set; }
+
     public static string ConnectionString { get; private set; } = "";
 
     public static bool Ssl { get; private set; }
@@ -69,6 +70,12 @@ public static class AppCommon
     public static string ApiKey { get; private set; } = "";
 
     public static string LdapServer { get; private set; } = "";
+
+    public static string LdapDomain { get; private set; } = "";
+
+    public static string LdapBaseDn { get; private set; } = "";
+
+    public static string LdapGroup { get; private set; } = "";
 
     private static readonly Dictionary<string, string> keyMap = new()
     {
@@ -87,7 +94,11 @@ public static class AppCommon
         { "MAX_CONSUMER_FETCH", nameof(ConsumerFetchMax) },
         { "MAX_CONSUMER_ATTEMPT", nameof(ConsumerAttemptMax) },
         { "MAX_PRODUCER_LINECOUNT", nameof(ProducerLineMax) },
+        { "LDAP_DOMAIN", nameof(LdapDomain) },
         { "LDAP_SERVER", nameof(LdapServer) },
+        { "LDAP_PORT", nameof(LdapPort) },
+        { "LDAP_BASEDN", nameof(LdapBaseDn) },
+        { "LDAP_GROUPS", nameof(LdapGroup) },
         { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
 

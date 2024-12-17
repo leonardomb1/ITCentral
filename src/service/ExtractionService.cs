@@ -48,6 +48,84 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
+    public async Task<Result<List<Extraction>, Error>> GetBySchedule(int scheduleId)
+    {
+        try
+        {
+            var select = from e in Repository.Extractions
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
+                         where e.ScheduleId == scheduleId
+                         select e;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
+    public async Task<Result<List<Extraction>, Error>> GetByDestination(int destinationId)
+    {
+        try
+        {
+            var select = from e in Repository.Extractions
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
+                         where e.DestinationId == destinationId
+                         select e;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
+    public async Task<Result<List<Extraction>, Error>> GetByNameAndDestination(int destinationId, string name)
+    {
+        try
+        {
+            var select = from e in Repository.Extractions
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
+                         where
+                            e.DestinationId == destinationId &&
+                            e.Name == name
+                         select e;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
+    public async Task<Result<List<Extraction>, Error>> Get(string name)
+    {
+        try
+        {
+            var select = from e in Repository.Extractions
+                         .LoadWith(e => e.Schedule)
+                         .LoadWith(e => e.Origin)
+                         .LoadWith(e => e.Destination)
+                         where e.Name == name
+                         select e;
+
+            return await select.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
     public async Task<Result<bool, Error>> Post(Extraction extraction)
     {
         try
