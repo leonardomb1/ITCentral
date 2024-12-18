@@ -19,7 +19,7 @@ public class ControllerBase
         short statusId = (short)status;
         Log.Out(
             $"{ctx.Request.Method} {statusId} - Received a request for {ctx.Request.Url.RawWithQuery} route.\n" +
-            $"  Source - IP: {ctx.Request.RetrieveHeaderValue("X-Forwarded-For")} " +
+            $"  Source - IP: {ctx.Request.RetrieveHeaderValue("X-Forwarded-For") ?? ctx.Request.Source.IpAddress} " +
             $"Agent: {ctx.Request.Useragent}, Origin: {ctx.Request.RetrieveHeaderValue("Origin")}",
             AppCommon.MessageRequest,
             dump: dumpLog

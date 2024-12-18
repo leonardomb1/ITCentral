@@ -5,7 +5,7 @@ using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
 
-namespace ITCentral.App.Exchange;
+namespace ITCentral.App;
 
 public abstract class DBExchange : ExchangeBase
 {

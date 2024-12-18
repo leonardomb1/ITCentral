@@ -1,5 +1,5 @@
 using System.Net;
-using ITCentral.App.Exchange;
+using ITCentral.App;
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Service;
@@ -197,12 +197,6 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
 
         using var extraction = new ExtractionService();
         var fetch = await extraction.Get(filters);
-
-        if (!fetch.IsSuccessful)
-        {
-            await HandleInternalServerError(ctx, fetch.Error);
-            return;
-        }
 
         fetch.Value
             .ForEach(x =>

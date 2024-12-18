@@ -13,9 +13,6 @@ public class Origin : IModel
     public string Name { get; set; } = "";
 
     [Column, NotNull, JsonRequired]
-    public string DatabaseType { get; set; } = "";
-
-    [Column, NotNull, JsonRequired]
     public string ConnectionString { get; set; } = "";
 
     public Origin() { }

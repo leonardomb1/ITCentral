@@ -1,7 +1,7 @@
 using ITCentral.Common;
 using ITCentral.Service;
 
-namespace ITCentral.App;
+namespace ITCentral.Common;
 
 public static class SessionManager
 {
