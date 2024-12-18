@@ -14,20 +14,15 @@ public class UserController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
+        var filters = ctx.Request.Query.Elements.AllKeys
+            .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
+
         using var user = new UserService();
-        var result = await user.Get();
+        var result = await user.Get(filters);
 
         if (!result.IsSuccessful)
         {
             await HandleInternalServerError(ctx, result.Error);
-            return;
-        }
-
-        if (result.Value is null)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK);
-            using Message<string> errMsg = new(statusId, "No Result", false);
-            await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
@@ -69,35 +64,6 @@ public class UserController : ControllerBase, IController<HttpContextBase>
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
         using Message<User> res = new(statusId, "OK", false, [result.Value]);
-        await context.Response.Send(res.AsJsonString());
-    }
-
-    public async Task GetByName(HttpContextBase ctx)
-    {
-        short statusId;
-
-        string name = ctx.Request.Url.Parameters["userName"]!;
-
-        using var user = new UserService();
-        var result = await user.Get(name);
-
-        if (!result.IsSuccessful)
-        {
-            await HandleInternalServerError(ctx, result.Error);
-            return;
-        }
-
-        if (result.Value.Count == 0)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK);
-            using Message<string> msg = new(statusId, "No Result", false);
-            await context.Response.Send(msg.AsJsonString());
-            return;
-        }
-
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
-
-        using Message<User> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
     }
 

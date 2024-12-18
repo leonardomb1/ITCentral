@@ -11,12 +11,25 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
 
     public ScheduleService() : base() { }
 
-    public async Task<Result<List<Schedule>, Error>> Get()
+    public async Task<Result<List<Schedule>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
             var select = from s in Repository.Schedules
                          select s;
+
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "scheduleName" => select.Where(e => e.Name == filter.Value),
+                        "status" when bool.TryParse(filter.Value, out var sts) => select.Where(e => e.Status == sts),
+                        _ => select
+                    };
+                }
+            }
 
             return await select.ToListAsync();
         }

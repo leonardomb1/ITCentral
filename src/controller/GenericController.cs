@@ -14,18 +14,22 @@ public class GenericController : ControllerBase
         using Message<string> res = new(statusId, "Not Found", true);
         await context.Response.Send(res.AsJsonString());
     }
+
     public static async Task Options(HttpContextBase ctx)
     {
         ctx.Response.Headers.Add("access-control-allow-methods", "OPTIONS, GET, POST, PUT, DELETE");
         await ctx.Response.Send();
     }
+
     public static async Task Authenticate(HttpContextBase ctx)
     {
-        if (ctx.Request.Url.RawWithoutQuery == "/api/users/login" || ctx.Request.Url.RawWithoutQuery == "/api/users/ssologin") return;
+        if (ctx.Request.Url.RawWithoutQuery == "/api/login" || ctx.Request.Url.RawWithoutQuery == "/api/ssologin") return;
+
         if (ctx.Request.HeaderExists("Key"))
         {
             if (ctx.Request.Headers.Get("Key") == AppCommon.ApiKey) return;
         }
+
         if (!ctx.Request.HeaderExists("Authorization"))
         {
             short statusId = BeginRequest(ctx, HttpStatusCode.Unauthorized);
@@ -44,6 +48,7 @@ public class GenericController : ControllerBase
             return;
         }
     }
+
     public static async Task ErrorDefaultRoute(HttpContextBase ctx, Exception ex)
     {
         await HandleInternalServerError(ctx, new Error(ex.Message, ex.StackTrace, false));

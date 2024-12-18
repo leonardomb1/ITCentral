@@ -75,7 +75,9 @@ public static class AppCommon
 
     public static string LdapBaseDn { get; private set; } = "";
 
-    public static string LdapGroup { get; private set; } = "";
+    public static string LdapGroups { get; private set; } = "";
+
+    public static string LdapGroupDN { get; private set; } = "";
 
     private static readonly Dictionary<string, string> keyMap = new()
     {
@@ -97,7 +99,8 @@ public static class AppCommon
         { "LDAP_SERVER", nameof(LdapServer) },
         { "LDAP_PORT", nameof(LdapPort) },
         { "LDAP_BASEDN", nameof(LdapBaseDn) },
-        { "LDAP_GROUPS", nameof(LdapGroup) },
+        { "LDAP_GROUPS", nameof(LdapGroups) },
+        { "LDAP_GROUPDN", nameof(LdapGroupDN) },
         { "LDAP_SSL", nameof(LdapSsl) },
         { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };

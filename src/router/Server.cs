@@ -13,6 +13,8 @@ public sealed class Server
 
     private readonly Webserver service;
 
+    private readonly string root = "/api";
+
     public Server()
     {
         service = new Webserver(
@@ -27,19 +29,16 @@ public sealed class Server
         var postAuth = service.Routes.PostAuthentication;
         var preAuth = service.Routes.PreAuthentication;
 
-        string root = "/api";
-
         // User model routes
         var userController = new UserController();
         string users = root + "/users";
-        preAuth.Static.Add(WebMethod.POST, root + "/login", userController.Login, ErrorDefaultRoute);
-        preAuth.Static.Add(WebMethod.POST, root + "/ssologin", userController.LoginWithLdap, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.GET, users, userController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.POST, users, userController.Post, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.GET, users + "/{userId}", userController.GetById, ErrorDefaultRoute);
-        postAuth.Parameter.Add(WebMethod.GET, users + "?name={userName}", userController.GetByName, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.PUT, users + "/{userId}", userController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, users + "/{userId}", userController.Delete, ErrorDefaultRoute);
+        preAuth.Static.Add(WebMethod.POST, root + "/login", userController.Login, ErrorDefaultRoute);
+        preAuth.Static.Add(WebMethod.POST, root + "/ssologin", userController.LoginWithLdap, ErrorDefaultRoute);
 
         // Origin model routes
         var originController = new OriginController();
@@ -73,17 +72,16 @@ public sealed class Server
         string extraction = root + "/extractions";
         postAuth.Static.Add(WebMethod.GET, extraction, extractionController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.POST, extraction, extractionController.Post, ErrorDefaultRoute);
-        postAuth.Static.Add(WebMethod.GET, extraction + "/execute/{extractionId}", extractionController.ExecuteExtractionByScheduleId, ErrorDefaultRoute);
-        postAuth.Parameter.Add(WebMethod.GET, extraction + "/execute", extractionController.ExecuteExtractionByNameOrDestination, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.GET, extraction + "/{extractionId}", extractionController.GetById, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.PUT, extraction + "/{extractionId}", extractionController.Put, ErrorDefaultRoute);
         postAuth.Parameter.Add(WebMethod.DELETE, extraction + "/{extractionId}", extractionController.Delete, ErrorDefaultRoute);
+        postAuth.Parameter.Add(WebMethod.GET, extraction + "/execute", extractionController.ExecuteExtraction, ErrorDefaultRoute);
 
         // Record model routes
         var recordController = new RecordController();
         string record = root + "/records";
         postAuth.Static.Add(WebMethod.GET, record + "/count", recordController.GetCount, ErrorDefaultRoute);
-        postAuth.Static.Add(WebMethod.GET, record, recordController.GetLast, ErrorDefaultRoute);
+        postAuth.Static.Add(WebMethod.GET, record, recordController.Get, ErrorDefaultRoute);
         postAuth.Static.Add(WebMethod.DELETE, record, recordController.Clear, ErrorDefaultRoute);
 
         // Authentication

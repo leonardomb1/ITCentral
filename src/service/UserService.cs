@@ -11,16 +11,29 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
 
     public UserService() : base() { }
 
-    public async Task<Result<List<User>, Error>> Get()
+    public async Task<Result<List<User>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
             var select = from u in Repository.Users
                          select u;
 
-            foreach (var u in select) u.Password = null;
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "username" => select.Where(e => e.Name == filter.Value),
+                        _ => select
+                    };
+                }
+            }
 
-            return await select.ToListAsync();
+            var result = await select.ToListAsync();
+            result.ForEach(u => u.Password = null);
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -46,40 +59,22 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
     }
 
-    public async Task<Result<List<User>, Error>> Get(string name)
+    public async Task<Result<string, Error>> GetUserCredential(string userName)
     {
         try
         {
-            var select = from u in Repository.Users
-                         where u.Name == name
+            var search = from u in Repository.Users
+                         where u.Name == userName
                          select u;
 
-            foreach (var u in select) u.Password = null;
+            var result = await search.FirstOrDefaultAsync();
 
-            return await select.ToListAsync();
+            return result?.Password == null ? "" : Encryption.SymmetricDecryptAES256(result.Password, AppCommon.MasterKey) ?? "";
         }
         catch (Exception ex)
         {
             return new Error(ex.Message, ex.StackTrace, false);
         }
-    }
-
-    public async Task<Result<string, Error>> GetUserCredential(string userName)
-    {
-        var search = await Get(userName);
-        if (!search.IsSuccessful)
-        {
-            return search.Error;
-        }
-
-        if (search.Value is null)
-        {
-            return "";
-        }
-
-        var user = search.Value.FirstOrDefault();
-
-        return Encryption.SymmetricDecryptAES256(user?.Password ?? "", AppCommon.MasterKey);
     }
 
     public async Task<Result<bool, Error>> Post(User user)

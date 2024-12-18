@@ -11,12 +11,24 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
 
     public OriginService() : base() { }
 
-    public async Task<Result<List<Origin>, Error>> Get()
+    public async Task<Result<List<Origin>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
             var select = from s in Repository.Origins
                          select s;
+
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "originName" => select.Where(e => e.Name == filter.Value),
+                        _ => select
+                    };
+                }
+            }
 
             return await select.ToListAsync();
         }

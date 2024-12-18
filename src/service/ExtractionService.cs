@@ -11,7 +11,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
 
     public ExtractionService() : base() { }
 
-    public async Task<Result<List<Extraction>, Error>> Get()
+    public async Task<Result<List<Extraction>, Error>> Get(Dictionary<string, string?>? filters)
     {
         try
         {
@@ -20,6 +20,21 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
                          .LoadWith(e => e.Origin)
                          .LoadWith(e => e.Destination)
                          select e;
+
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "name" => select.Where(e => e.Name == filter.Value),
+                        "scheduleId" when int.TryParse(filter.Value, out var schId) => select.Where(e => e.ScheduleId == schId),
+                        "originId" when int.TryParse(filter.Value, out var oriId) => select.Where(e => e.OriginId == oriId),
+                        "destinationId" when int.TryParse(filter.Value, out var destId) => select.Where(e => e.DestinationId == destId),
+                        _ => select
+                    };
+                }
+            }
 
             return await select.ToListAsync();
         }
@@ -41,84 +56,6 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
                          select e;
 
             return await select.FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-
-    public async Task<Result<List<Extraction>, Error>> GetBySchedule(int scheduleId)
-    {
-        try
-        {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         where e.ScheduleId == scheduleId
-                         select e;
-
-            return await select.ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-
-    public async Task<Result<List<Extraction>, Error>> GetByDestination(int destinationId)
-    {
-        try
-        {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         where e.DestinationId == destinationId
-                         select e;
-
-            return await select.ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-
-    public async Task<Result<List<Extraction>, Error>> GetByNameAndDestination(int destinationId, string name)
-    {
-        try
-        {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         where
-                            e.DestinationId == destinationId &&
-                            e.Name == name
-                         select e;
-
-            return await select.ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            return new Error(ex.Message, ex.StackTrace, false);
-        }
-    }
-
-    public async Task<Result<List<Extraction>, Error>> Get(string name)
-    {
-        try
-        {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         where e.Name == name
-                         select e;
-
-            return await select.ToListAsync();
         }
         catch (Exception ex)
         {

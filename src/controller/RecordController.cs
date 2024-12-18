@@ -8,20 +8,27 @@ namespace ITCentral.Controller;
 
 public class RecordController : ControllerBase
 {
-    public async Task GetLast(HttpContextBase ctx)
+    public async Task Get(HttpContextBase ctx)
     {
         short statusId;
 
-        if (!int.TryParse(ctx.Request.RetrieveQueryValue("filterTimeInSecs"), null, out int filterTimeInSecs))
+        var filters = ctx.Request.Query.Elements.AllKeys
+            .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
+
+        var invalidFilters = filters.Where(f =>
+            (f.Key == "relativeFromNow" || f.Key == "last") &&
+            !int.TryParse(f.Value, out _)).ToList();
+
+        if (invalidFilters.Count > 0)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest, dumpLog: false);
+            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
         using var record = new RecordService();
-        var result = await record.GetLast(filterTimeInSecs);
+        var result = await record.Get(filters);
 
         if (!result.IsSuccessful)
         {
@@ -29,15 +36,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        if (result.Value is null)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
-            using Message<string> errMsg = new(statusId, "No Result", false);
-            await context.Response.Send(errMsg.AsJsonString());
-            return;
-        }
-
-        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
+        statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
         using Message<Record> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());

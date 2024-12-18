@@ -4,7 +4,7 @@ namespace ITCentral.Service;
 
 internal interface IService<T, ID>
 {
-    public Task<Result<List<T>, Error>> Get();
+    public Task<Result<List<T>, Error>> Get(Dictionary<string, string?>? filters = null);
 
     public Task<Result<T?, Error>> Get(ID id);
 

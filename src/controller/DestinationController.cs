@@ -13,20 +13,15 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
     {
         short statusId;
 
-        using var Destination = new DestinationService();
-        var result = await Destination.Get();
+        var filters = ctx.Request.Query.Elements.AllKeys
+            .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
+
+        using var destination = new DestinationService();
+        var result = await destination.Get(filters);
 
         if (!result.IsSuccessful)
         {
             await HandleInternalServerError(ctx, result.Error);
-            return;
-        }
-
-        if (result.Value is null)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK);
-            using Message<string> errMsg = new(statusId, "No Result", false);
-            await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 

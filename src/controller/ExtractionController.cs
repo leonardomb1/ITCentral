@@ -14,20 +14,27 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
+        var filters = ctx.Request.Query.Elements.AllKeys
+            .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
+
+        var invalidFilters = filters.Where(f =>
+            (f.Key == "destinationId" || f.Key == "scheduleId" || f.Key == "originId") &&
+            !int.TryParse(f.Value, out _)).ToList();
+
+        if (invalidFilters.Count > 0)
+        {
+            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            using Message<string> errMsg = new(statusId, "Bad Request", true);
+            await context.Response.Send(errMsg.AsJsonString());
+            return;
+        }
+
         using var extraction = new ExtractionService();
-        var result = await extraction.Get();
+        var result = await extraction.Get(filters);
 
         if (!result.IsSuccessful)
         {
             await HandleInternalServerError(ctx, result.Error);
-            return;
-        }
-
-        if (result.Value is null)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK);
-            using Message<string> errMsg = new(statusId, "No Result", false);
-            await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
@@ -169,94 +176,18 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         await context.Response.Send(res.AsJsonString());
     }
 
-    public async Task ExecuteExtractionByNameOrDestination(HttpContextBase ctx)
+    public async Task ExecuteExtraction(HttpContextBase ctx)
     {
         short statusId;
 
-        string? queryName = ctx.Request.Query.Elements.Get("name");
-        string? queryDestination = ctx.Request.Query.Elements.Get("destination");
+        var filters = ctx.Request.Query.Elements.AllKeys
+            .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
 
-        using var extraction = new ExtractionService();
-        List<Extraction> extractions = [];
+        var invalidFilters = filters.Where(f =>
+            (f.Key == "destinationId" || f.Key == "scheduleId" || f.Key == "originId") &&
+            !int.TryParse(f.Value, out _)).ToList();
 
-        Action switcher = (queryName, queryDestination) switch
-        {
-            { queryName: not null, queryDestination: not null } => async () =>
-            {
-                if (!int.TryParse(queryDestination, null, out int destinationId))
-                {
-                    statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
-                    using Message<string> errMsg = new(statusId, "Bad Request", true);
-                    await context.Response.Send(errMsg.AsJsonString());
-                    return;
-                }
-                var res = await extraction.GetByNameAndDestination(destinationId, queryName);
-
-                extractions = res.Value;
-            }
-            ,
-
-            { queryName: not null, queryDestination: null } => async () =>
-            {
-                var res = await extraction.Get(queryName);
-
-                extractions = res.Value;
-            }
-            ,
-
-            { queryName: null, queryDestination: not null } => async () =>
-            {
-                if (!int.TryParse(queryDestination, null, out int destinationId))
-                {
-                    statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
-                    using Message<string> errMsg = new(statusId, "Bad Request", true);
-                    await context.Response.Send(errMsg.AsJsonString());
-                    return;
-                }
-                var res = await extraction.GetByDestination(destinationId);
-
-                extractions = res.Value;
-            }
-            ,
-
-            _ => async () =>
-            {
-                statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
-                using Message<string> errMsg = new(statusId, "Bad Request", true);
-                await context.Response.Send(errMsg.AsJsonString());
-                return;
-            }
-        };
-
-        switcher.Invoke();
-
-        extractions
-            .ForEach(x =>
-            {
-                x.Origin!.ConnectionString = Encryption.SymmetricDecryptAES256(x.Origin!.ConnectionString, AppCommon.MasterKey);
-                x.Destination!.DbString = Encryption.SymmetricDecryptAES256(x.Destination!.DbString, AppCommon.MasterKey);
-            });
-
-        var dBExchange = new MSSQLExchange();
-        var result = await dBExchange.ChannelParallelize(extractions);
-
-        if (!result.IsSuccessful)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
-            using Message<Error> errMsg = new(statusId, "Extraction Failed", true, result.Error);
-            return;
-        }
-
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Extraction> res = new(statusId, "OK", false);
-        await context.Response.Send(res.AsJsonString());
-    }
-
-    public async Task ExecuteExtractionByScheduleId(HttpContextBase ctx)
-    {
-        short statusId;
-
-        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        if (invalidFilters.Count > 0)
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -265,9 +196,15 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
         }
 
         using var extraction = new ExtractionService();
-        var extractions = await extraction.GetBySchedule(scheduleId);
+        var fetch = await extraction.Get(filters);
 
-        extractions.Value
+        if (!fetch.IsSuccessful)
+        {
+            await HandleInternalServerError(ctx, fetch.Error);
+            return;
+        }
+
+        fetch.Value
             .ForEach(x =>
             {
                 x.Origin!.ConnectionString = Encryption.SymmetricDecryptAES256(x.Origin!.ConnectionString, AppCommon.MasterKey);
@@ -275,7 +212,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             });
 
         var dBExchange = new MSSQLExchange();
-        var result = await dBExchange.ChannelParallelize(extractions.Value);
+        var result = await dBExchange.ChannelParallelize(fetch.Value);
 
         if (!result.IsSuccessful)
         {

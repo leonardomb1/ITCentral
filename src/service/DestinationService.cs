@@ -11,12 +11,24 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
 
     public DestinationService() : base() { }
 
-    public async Task<Result<List<Destination>, Error>> Get()
+    public async Task<Result<List<Destination>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
             var select = from db in Repository.Destinations
                          select db;
+
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "destinationName" => select.Where(e => e.Name == filter.Value),
+                        _ => select
+                    };
+                }
+            }
 
             return await select.ToListAsync();
         }

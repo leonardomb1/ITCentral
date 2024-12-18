@@ -12,14 +12,34 @@ public class RecordService : ServiceBase, IDisposable
 
     public RecordService() : base() { }
 
-    public async Task<Result<List<Record>, Error>> GetLast(int relativeTimeSec)
+    public async Task<Result<List<Record>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
             var select = from s in Repository.Records
-                         where s.TimeStamp > DateTime.Now.AddSeconds(-relativeTimeSec)
-                         orderby s.TimeStamp descending
                          select s;
+
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "relativeFromNow" when int.TryParse(filter.Value, out var time)
+                            => select
+                                .Where(e => e.TimeStamp > DateTime.Now.AddSeconds(-time))
+                                .OrderByDescending(x => x.TimeStamp),
+                        "last" when int.TryParse(filter.Value, out var count)
+                            => select
+                                .OrderByDescending(x => x.TimeStamp)
+                                .Take(count),
+                        "hostname" => select.Where(e => e.HostName == filter.Value),
+                        "type" => select.Where(e => e.EventType == filter.Value),
+                        "event" => select.Where(e => e.Event.Contains(filter.Value ?? "")),
+                        _ => select
+                    };
+                }
+            }
 
             return await select.ToListAsync();
         }

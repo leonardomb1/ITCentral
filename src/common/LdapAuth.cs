@@ -11,25 +11,23 @@ public static class LdapAuth
     {
         try
         {
-            var credential = new NetworkCredential(username, password, AppCommon.LdapDomain);
-            var identifier = new LdapDirectoryIdentifier("");
-            using var connection = new LdapConnection("ldap://10.247.81.10:389");
-
-            connection.AuthType = AuthType.Basic;
-            connection.Credential = credential;
+            var credential = new NetworkCredential(username, password);
+            var identifier = new LdapDirectoryIdentifier(AppCommon.LdapServer, AppCommon.LdapPort);
+            using var connection = new LdapConnection(identifier, credential, AuthType.Basic);
 
             connection.SessionOptions.SecureSocketLayer = AppCommon.LdapSsl;
+            connection.SessionOptions.VerifyServerCertificate += (conn, cert) => true;
 
             connection.Bind();
 
-            string[] groups = AppCommon.LdapGroup.Split("|");
+            string[] groups = AppCommon.LdapGroups.Split("|");
             StringBuilder stringBuilder = new();
 
             stringBuilder.Append($"(&(sAMAccountName={username})(|");
 
             foreach (string g in groups)
             {
-                stringBuilder.Append($"(memberOf=CN={g},{AppCommon.LdapBaseDn})");
+                stringBuilder.Append($"(memberOf=CN={g},{AppCommon.LdapGroupDN})");
             }
 
             stringBuilder.Append("))");
@@ -39,7 +37,7 @@ public static class LdapAuth
                 AppCommon.LdapBaseDn,
                 stringBuilder.ToString(),
                 searchScope: SearchScope.Subtree,
-                null
+                "sAMAccountName"
             );
 
             var searchRes = (SearchResponse)connection.SendRequest(searchRequest);
