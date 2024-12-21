@@ -12,6 +12,9 @@ public class Destination : IModel
     [Column, NotNull, JsonRequired, JsonPropertyName("DestinationName")]
     public string Name { get; set; } = "";
 
+    [Column, NotNull, JsonRequired, JsonPropertyName("DestinationDbType")]
+    public string DbType { get; set; } = "";
+
     [Column, NotNull, JsonRequired]
     public string DbString { get; set; } = "";
 

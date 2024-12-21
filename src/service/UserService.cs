@@ -24,7 +24,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
                 {
                     select = filter.Key.ToLower() switch
                     {
-                        "username" => select.Where(e => e.Name == filter.Value),
+                        "name" => select.Where(e => e.Name == filter.Value),
                         _ => select
                     };
                 }

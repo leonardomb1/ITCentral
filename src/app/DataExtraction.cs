@@ -6,9 +6,9 @@ using ITCentral.Types;
 
 namespace ITCentral.App;
 
-public abstract class ExchangeBase
+public static class DataExtraction
 {
-    public async Task<Result<bool, List<Error>>> ChannelParallelize(List<Extraction> extractions)
+    public static async Task<Result<bool, List<Error>>> ChannelParallelize(List<Extraction> extractions)
     {
         Channel<(DataTable, Extraction)> channel = Channel.CreateBounded<(DataTable, Extraction)>(AppCommon.MaxDegreeParallel);
         List<Error> errors = [];
@@ -19,9 +19,12 @@ public abstract class ExchangeBase
             {
                 bool hasData = true;
                 int curr = 0;
+
+                var fetcher = DBExchangeFactory.Create(e.Origin!.DbType);
+
                 do
                 {
-                    var attempt = await FetchDataTable(e, curr, t);
+                    var attempt = await fetcher.FetchDataTable(e, curr, t);
                     if (!attempt.IsSuccessful)
                     {
                         errors.Add(attempt.Error);
@@ -65,19 +68,20 @@ public abstract class ExchangeBase
                 do
                 {
                     attempt++;
-                    foreach (var e in groupedData)
+                    await Parallel.ForEachAsync(groupedData, AppCommon.ParallelRule, async (e, t) =>
                     {
                         try
                         {
-                            create = await CreateTable(e.MergedTable, e.Extraction);
-                            insert = await WriteDataTable(e.MergedTable, e.Extraction);
+                            var inserter = DBExchangeFactory.Create(e.Extraction.Destination!.DbType);
+                            create = await inserter.CreateTable(e.MergedTable, e.Extraction);
+                            insert = await inserter.WriteDataTable(e.MergedTable, e.Extraction);
                         }
                         finally
                         {
                             e.MergedTable.Dispose();
                         }
-                    }
-                } while ((!insert.IsSuccessful) && attempt < AppCommon.ConsumerAttemptMax);
+                    });
+                } while ((!insert.IsSuccessful || !create.IsSuccessful) && attempt < AppCommon.ConsumerAttemptMax);
 
                 if (attempt > AppCommon.ConsumerAttemptMax)
                 {
@@ -91,7 +95,7 @@ public abstract class ExchangeBase
         return AppCommon.Success;
     }
 
-    protected static DataTable MergeDataTables(List<DataTable> tables)
+    public static DataTable MergeDataTables(List<DataTable> tables)
     {
         if (tables == null || tables.Count == 0)
             throw new ArgumentException("No tables to merge.");
@@ -118,10 +122,4 @@ public abstract class ExchangeBase
 
         return mergedTable;
     }
-
-    protected abstract Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token);
-
-    protected abstract Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction info);
-
-    protected abstract Task<Result<bool, Error>> CreateTable(DataTable table, Extraction extraction);
 }

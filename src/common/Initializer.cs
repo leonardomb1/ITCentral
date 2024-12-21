@@ -41,7 +41,7 @@ public static class Initializer
             dependencies[type] = foreignKeys;
         }
 
-        var sortedEntities = AppCommon.TopologicalSort(entityTypes, dependencies);
+        var sortedEntities = TopologicalSort(entityTypes, dependencies);
 
         foreach (var entityType in sortedEntities)
         {
@@ -162,5 +162,32 @@ public static class Initializer
         InitializeDb();
         Server server = new();
         server.Run();
+    }
+
+    private static List<Type> TopologicalSort(List<Type> types, Dictionary<Type, List<Type>> dependencies)
+    {
+        var sorted = new List<Type>();
+        var visited = new HashSet<Type>();
+
+        void Visit(Type type)
+        {
+            if (visited.Contains(type))
+                return;
+
+            visited.Add(type);
+
+            if (dependencies.TryGetValue(type, out var dependentTypes))
+            {
+                foreach (var depType in dependentTypes)
+                    Visit(depType);
+            }
+
+            sorted.Add(type);
+        }
+
+        foreach (var type in types)
+            Visit(type);
+
+        return sorted;
     }
 }

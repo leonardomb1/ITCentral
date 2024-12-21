@@ -18,7 +18,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
 
         var invalidFilters = filters.Where(f =>
-            (f.Key == "destinationId" || f.Key == "scheduleId" || f.Key == "originId") &&
+            (f.Key == "destination" || f.Key == "schedule" || f.Key == "origin") &&
             !int.TryParse(f.Value, out _)).ToList();
 
         if (invalidFilters.Count > 0)
@@ -184,7 +184,7 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
             .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
 
         var invalidFilters = filters.Where(f =>
-            (f.Key == "destinationId" || f.Key == "scheduleId" || f.Key == "originId") &&
+            (f.Key == "destination" || f.Key == "schedule" || f.Key == "origin") &&
             !int.TryParse(f.Value, out _)).ToList();
 
         if (invalidFilters.Count > 0)
@@ -205,18 +205,17 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
                 x.Destination!.DbString = Encryption.SymmetricDecryptAES256(x.Destination!.DbString, AppCommon.MasterKey);
             });
 
-        var dBExchange = new MSSQLExchange();
-        var result = await dBExchange.ChannelParallelize(fetch.Value);
-
+        var result = await DataExtraction.ChannelParallelize(fetch.Value);
         if (!result.IsSuccessful)
         {
             statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
             using Message<Error> errMsg = new(statusId, "Extraction Failed", true, result.Error);
+            await context.Response.Send(errMsg.AsJsonString());
             return;
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Extraction> res = new(statusId, "OK", false);
+        using Message<string> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 }

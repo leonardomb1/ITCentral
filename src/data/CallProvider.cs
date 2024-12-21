@@ -1,4 +1,5 @@
 using ITCentral.Common;
+using ITCentral.Types;
 using LinqToDB;
 using LinqToDB.Configuration;
 
@@ -21,19 +22,19 @@ public class CallProvider : ILinqToDBSettings
     {
         get
         {
-        yield return new ConnectionStringSettings
-        {
-            Name = "SqlServer",
-            ProviderName = ProviderName.SqlServer,
-            ConnectionString = AppCommon.ConnectionString
-        };
+            yield return new ConnectionStringSettings
+            {
+                Name = DbTypes.MSSQL,
+                ProviderName = ProviderName.SqlServer,
+                ConnectionString = AppCommon.ConnectionString
+            };
 
-        yield return new ConnectionStringSettings
-        {
-            Name = "Sqlite",
-            ProviderName = ProviderName.SQLite,
-            ConnectionString = AppCommon.ConnectionString
-        };
+            yield return new ConnectionStringSettings
+            {
+                Name = DbTypes.Sqlite,
+                ProviderName = ProviderName.SQLite,
+                ConnectionString = AppCommon.ConnectionString
+            };
         }
     }
 }

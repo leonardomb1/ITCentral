@@ -1,7 +1,6 @@
-using System.DirectoryServices.Protocols;
-using System.Net;
 using System.Text;
 using ITCentral.Types;
+using Novell.Directory.Ldap;
 
 namespace ITCentral.Common;
 
@@ -11,14 +10,26 @@ public static class LdapAuth
     {
         try
         {
-            var credential = new NetworkCredential(username, password);
-            var identifier = new LdapDirectoryIdentifier(AppCommon.LdapServer, AppCommon.LdapPort);
-            using var connection = new LdapConnection(identifier, credential, AuthType.Basic);
+            var connectionOptions = new LdapConnectionOptions();
+            connectionOptions.ConfigureRemoteCertificateValidationCallback(
+                (sender, certificate, chain, sslPolicyErrors) =>
+                {
+                    if (AppCommon.LdapVerifyCertificate)
+                    {
+                        return sslPolicyErrors == System.Net.Security.SslPolicyErrors.None;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            );
 
-            connection.SessionOptions.SecureSocketLayer = AppCommon.LdapSsl;
-            connection.SessionOptions.VerifyServerCertificate += (conn, cert) => true;
+            using var connection = new LdapConnection(connectionOptions);
+            connection.SecureSocketLayer = AppCommon.LdapSsl;
 
-            connection.Bind();
+            connection.Connect(AppCommon.LdapServer, AppCommon.LdapPort);
+            connection.Bind($"{username}@{AppCommon.LdapDomain}.com", password);
 
             string[] groups = AppCommon.LdapGroups.Split("|");
             StringBuilder stringBuilder = new();
@@ -33,18 +44,22 @@ public static class LdapAuth
             stringBuilder.Append("))");
 
 
-            var searchRequest = new SearchRequest(
+            var results = connection.Search(
                 AppCommon.LdapBaseDn,
+                LdapConnection.ScopeSub,
                 stringBuilder.ToString(),
-                searchScope: SearchScope.Subtree,
-                "sAMAccountName"
+                null,
+                false
             );
 
-            var searchRes = (SearchResponse)connection.SendRequest(searchRequest);
-
-            if (searchRes.Entries.Count == 0) return AppCommon.Fail;
-
-            return AppCommon.Success;
+            if (!results.HasMore())
+            {
+                return AppCommon.Fail;
+            }
+            else
+            {
+                return AppCommon.Success;
+            }
         }
         catch (Exception ex)
         {

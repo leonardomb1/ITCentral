@@ -24,7 +24,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
                 {
                     select = filter.Key.ToLower() switch
                     {
-                        "scheduleName" => select.Where(e => e.Name == filter.Value),
+                        "name" => select.Where(e => e.Name == filter.Value),
                         "status" when bool.TryParse(filter.Value, out var sts) => select.Where(e => e.Status == sts),
                         _ => select
                     };

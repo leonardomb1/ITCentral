@@ -7,7 +7,7 @@ using ITCentral.Types;
 
 namespace ITCentral.App;
 
-public abstract class DBExchange : ExchangeBase
+public abstract class DBExchange
 {
     protected abstract string? QueryNonLocking();
 
@@ -31,7 +31,7 @@ public abstract class DBExchange : ExchangeBase
 
     protected abstract Task<Result<bool, Error>> BulkInsert(DataTable data, Extraction extraction);
 
-    protected override async Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token)
+    public async Task<Result<DataTable, Error>> FetchDataTable(Extraction extraction, int current, CancellationToken token)
     {
         try
         {
@@ -85,7 +85,7 @@ public abstract class DBExchange : ExchangeBase
         }
     }
 
-    protected override async Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction extraction)
+    public async Task<Result<bool, Error>> WriteDataTable(DataTable table, Extraction extraction)
     {
         var insert = await BulkInsert(table, extraction);
         if (!insert.IsSuccessful) return insert.Error;
@@ -93,7 +93,7 @@ public abstract class DBExchange : ExchangeBase
         return AppCommon.Success;
     }
 
-    protected override async Task<Result<bool, Error>> CreateTable(DataTable table, Extraction extraction)
+    public async Task<Result<bool, Error>> CreateTable(DataTable table, Extraction extraction)
     {
         using var connection = CreateConnection(extraction.Destination!.DbString);
         await connection.OpenAsync();

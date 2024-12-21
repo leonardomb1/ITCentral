@@ -16,12 +16,12 @@ public class RecordController : ControllerBase
             .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
 
         var invalidFilters = filters.Where(f =>
-            (f.Key == "relativeFromNow" || f.Key == "last") &&
+            (f.Key == "relative" || f.Key == "take") &&
             !int.TryParse(f.Value, out _)).ToList();
 
         if (invalidFilters.Count > 0)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest, dumpLog: false);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -36,7 +36,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
 
         using Message<Record> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
@@ -74,7 +74,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
         using Message<string> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }

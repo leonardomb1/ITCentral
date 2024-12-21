@@ -24,7 +24,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
                 {
                     select = filter.Key.ToLower() switch
                     {
-                        "originName" => select.Where(e => e.Name == filter.Value),
+                        "name" => select.Where(e => e.Name == filter.Value),
                         _ => select
                     };
                 }

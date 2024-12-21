@@ -25,20 +25,34 @@ public class RecordService : ServiceBase, IDisposable
                 {
                     select = filter.Key.ToLower() switch
                     {
-                        "relativeFromNow" when int.TryParse(filter.Value, out var time)
-                            => select
-                                .Where(e => e.TimeStamp > DateTime.Now.AddSeconds(-time))
-                                .OrderByDescending(x => x.TimeStamp),
-                        "last" when int.TryParse(filter.Value, out var count)
-                            => select
-                                .OrderByDescending(x => x.TimeStamp)
-                                .Take(count),
-                        "hostname" => select.Where(e => e.HostName == filter.Value),
-                        "type" => select.Where(e => e.EventType == filter.Value),
-                        "event" => select.Where(e => e.Event.Contains(filter.Value ?? "")),
+                        "relative" when int.TryParse(filter.Value, out var time) =>
+                            select
+                                .Where(e => e.TimeStamp > DateTime.Now.AddSeconds(-time)),
+                        "hostname" =>
+                            select
+                                .Where(e => e.HostName == filter.Value),
+                        "type" =>
+                            select
+                                .Where(e => e.EventType == filter.Value),
+                        "event" =>
+                            select
+                                .Where(e => e.Event.Contains(filter.Value ?? "")),
                         _ => select
                     };
                 }
+
+                if (filters.TryGetValue("take", out var takeValue) && int.TryParse(takeValue, out var count))
+                {
+                    select = select.OrderByDescending(x => x.TimeStamp).Take(count);
+                }
+                else
+                {
+                    select = select.OrderByDescending(x => x.TimeStamp);
+                }
+            }
+            else
+            {
+                select = select.OrderByDescending(x => x.TimeStamp);
             }
 
             return await select.ToListAsync();

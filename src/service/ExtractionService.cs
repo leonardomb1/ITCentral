@@ -28,9 +28,9 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
                     select = filter.Key.ToLower() switch
                     {
                         "name" => select.Where(e => e.Name == filter.Value),
-                        "scheduleId" when int.TryParse(filter.Value, out var schId) => select.Where(e => e.ScheduleId == schId),
-                        "originId" when int.TryParse(filter.Value, out var oriId) => select.Where(e => e.OriginId == oriId),
-                        "destinationId" when int.TryParse(filter.Value, out var destId) => select.Where(e => e.DestinationId == destId),
+                        "schedule" when int.TryParse(filter.Value, out var schId) => select.Where(e => e.ScheduleId == schId),
+                        "origin" when int.TryParse(filter.Value, out var oriId) => select.Where(e => e.OriginId == oriId),
+                        "destination" when int.TryParse(filter.Value, out var destId) => select.Where(e => e.DestinationId == destId),
                         _ => select
                     };
                 }

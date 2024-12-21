@@ -52,6 +52,8 @@ public static class AppCommon
 
     public static bool LdapSsl { get; private set; }
 
+    public static bool LdapVerifyCertificate { get; private set; }
+
     public static string HostName { get; private set; } = "";
 
     public static string DbType { get; private set; } = "";
@@ -93,6 +95,7 @@ public static class AppCommon
         { "LDAP_GROUPS", nameof(LdapGroups) },
         { "LDAP_GROUPDN", nameof(LdapGroupDN) },
         { "LDAP_SSL", nameof(LdapSsl) },
+        { "LDAP_VERIFY_CERTIFICATE", nameof(LdapVerifyCertificate) },
         { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
 
@@ -120,32 +123,5 @@ public static class AppCommon
         Console.WriteLine(
             "Developed by Leonardo M. Baptista\n"
         );
-    }
-
-    public static List<Type> TopologicalSort(List<Type> types, Dictionary<Type, List<Type>> dependencies)
-    {
-        var sorted = new List<Type>();
-        var visited = new HashSet<Type>();
-
-        void Visit(Type type)
-        {
-            if (visited.Contains(type))
-                return;
-
-            visited.Add(type);
-
-            if (dependencies.TryGetValue(type, out var dependentTypes))
-            {
-                foreach (var depType in dependentTypes)
-                    Visit(depType);
-            }
-
-            sorted.Add(type);
-        }
-
-        foreach (var type in types)
-            Visit(type);
-
-        return sorted;
     }
 }
