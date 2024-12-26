@@ -5,8 +5,13 @@ using ITCentral.Common;
 
 namespace ITCentral.Data
 {
+
     public class EntityCreate : DbContext
     {
+        private static string GetTableName<T>() => typeof(T).GetCustomAttributes(typeof(LinqToDB.Mapping.TableAttribute), true)
+                                                    .Cast<LinqToDB.Mapping.TableAttribute>()
+                                                    .FirstOrDefault()?.Name ?? typeof(T).Name;
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             _ = AppCommon.DbType switch
@@ -22,6 +27,7 @@ namespace ITCentral.Data
         {
             modelBuilder.Entity<Extraction>(entity =>
             {
+                entity.ToTable(GetTableName<Extraction>());
                 entity.HasKey(e => e.Id);
 
                 entity.Property(e => e.Name).IsRequired();
@@ -52,24 +58,29 @@ namespace ITCentral.Data
 
             modelBuilder.Entity<Schedule>(entity =>
             {
+
+                entity.ToTable(GetTableName<Schedule>());
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired();
             });
 
             modelBuilder.Entity<Origin>(entity =>
             {
+                entity.ToTable(GetTableName<Origin>());
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired();
             });
 
             modelBuilder.Entity<Destination>(entity =>
             {
+                entity.ToTable(GetTableName<Destination>());
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired();
             });
 
             modelBuilder.Entity<Record>(entity =>
             {
+                entity.ToTable(GetTableName<Record>());
                 entity.HasNoKey();
                 entity.Property(e => e.HostName).IsRequired();
                 entity.Property(e => e.TimeStamp).IsRequired();
@@ -80,6 +91,7 @@ namespace ITCentral.Data
 
             modelBuilder.Entity<User>(entity =>
             {
+                entity.ToTable(GetTableName<User>());
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired();
                 entity.Property(e => e.Password);
