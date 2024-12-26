@@ -45,15 +45,12 @@ public class RecordService : ServiceBase, IDisposable
                 {
                     select = select.OrderByDescending(x => x.TimeStamp).Take(count);
                 }
-                else
-                {
-                    select = select.OrderByDescending(x => x.TimeStamp);
-                }
             }
             else
             {
                 select = select.OrderByDescending(x => x.TimeStamp);
             }
+
 
             return await select.ToListAsync();
         }

@@ -13,11 +13,16 @@ public static class Log
 
     private static string LogPrefix(DateTime time) => $"[{time:yyyy-MM-dd HH:mm:ss:fff}]::";
 
-    private static readonly Lazy<Timer> logTimer = new(() => new Timer(async _ => await DumpLogsToFile(null), null, AppCommon.LogDumpTime, AppCommon.LogDumpTime));
+    private static readonly Timer logDumpTimer = new(async _ =>
+        {
+            await DumpLogsToFile(null);
+        }
+        , null, AppCommon.LogDumpTime, AppCommon.LogDumpTime
+    );
 
     static Log()
     {
-        _ = logTimer.Value;
+        logDumpTimer.Change(AppCommon.LogDumpTime, AppCommon.LogDumpTime);
     }
 
     public static void Out(

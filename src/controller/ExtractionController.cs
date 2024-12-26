@@ -205,7 +205,13 @@ public class ExtractionController : ControllerBase, IController<HttpContextBase>
                 x.Destination!.DbString = Encryption.SymmetricDecryptAES256(x.Destination!.DbString, AppCommon.MasterKey);
             });
 
-        var result = await DataExtraction.ChannelParallelize(fetch.Value);
+        var result = await ParallelExtractionManager.ChannelParallelize(
+            fetch.Value,
+            ParallelExtractionManager.ProduceDBData,
+            ParallelExtractionManager.ConsumeDBData
+
+        );
+
         if (!result.IsSuccessful)
         {
             statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);

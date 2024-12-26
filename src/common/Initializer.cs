@@ -1,10 +1,8 @@
 using System.Reflection;
 using ITCentral.Data;
-using ITCentral.Models;
 using ITCentral.Router;
 using LinqToDB;
 using LinqToDB.Data;
-using LinqToDB.Mapping;
 using YamlDotNet.RepresentationModel;
 
 namespace ITCentral.Common;
@@ -14,70 +12,9 @@ public static class Initializer
     public static void InitializeDb()
     {
         DataConnection.DefaultSettings = new CallProvider();
-
-        using var repository = new CallBase();
-
-        var entityTypes = Assembly.GetExecutingAssembly()
-            .GetTypes()
-            .Where(t =>
-            {
-                return typeof(IModel)
-                    .IsAssignableFrom(t) &&
-                    t.IsClass &&
-                    t.GetCustomAttribute<TableAttribute>() != null;
-            })
-            .ToList();
-
-        var dependencies = new Dictionary<Type, List<Type>>();
-
-        foreach (var type in entityTypes)
-        {
-            var foreignKeys = type.GetProperties()
-                .Where(p => entityTypes.Contains(p.PropertyType))
-                .Select(p => p.PropertyType)
-                .Distinct()
-                .ToList();
-
-            dependencies[type] = foreignKeys;
-        }
-
-        var sortedEntities = TopologicalSort(entityTypes, dependencies);
-
-        foreach (var entityType in sortedEntities)
-        {
-            var tableAttribute = entityType.GetCustomAttribute<TableAttribute>();
-            string tableName = tableAttribute?.Name ?? entityType.Name;
-
-            if (!repository.Exists(tableName))
-            {
-                Log.Out($"Creating table for model class: {entityType.Name}");
-
-                var createTableMethod = typeof(DataExtensions)
-                    .GetMethod(nameof(DataExtensions.CreateTable))?
-                    .MakeGenericMethod(entityType);
-
-                createTableMethod?.Invoke(null,
-                [
-                    repository,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    TableOptions.None
-                ]);
-
-                Log.Out($"Table created for: {entityType.Name}");
-            }
-            else
-            {
-                Log.Out($"Table already exists for: {entityType.Name}");
-            }
-        }
+        using var db = new EntityCreate();
+        db.Database.EnsureCreated();
     }
-
 
     public static void InitializeFromArgs(string[] args)
     {
@@ -162,32 +99,5 @@ public static class Initializer
         InitializeDb();
         Server server = new();
         server.Run();
-    }
-
-    private static List<Type> TopologicalSort(List<Type> types, Dictionary<Type, List<Type>> dependencies)
-    {
-        var sorted = new List<Type>();
-        var visited = new HashSet<Type>();
-
-        void Visit(Type type)
-        {
-            if (visited.Contains(type))
-                return;
-
-            visited.Add(type);
-
-            if (dependencies.TryGetValue(type, out var dependentTypes))
-            {
-                foreach (var depType in dependentTypes)
-                    Visit(depType);
-            }
-
-            sorted.Add(type);
-        }
-
-        foreach (var type in types)
-            Visit(type);
-
-        return sorted;
     }
 }

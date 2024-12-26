@@ -1,5 +1,4 @@
 using ITCentral.Common;
-using ITCentral.Types;
 using LinqToDB;
 using LinqToDB.Configuration;
 
@@ -17,22 +16,29 @@ public class CallProvider : ILinqToDBSettings
 {
     public IEnumerable<IDataProviderSettings> DataProviders => [];
     public string DefaultConfiguration => AppCommon.DbType;
-    public string DefaultDataProvider => AppCommon.DbType;
+    public string DefaultDataProvider => ProviderName.SQLite;
     public IEnumerable<IConnectionStringSettings> ConnectionStrings
     {
         get
         {
             yield return new ConnectionStringSettings
             {
-                Name = DbTypes.MSSQL,
+                Name = ProviderName.SqlServer,
                 ProviderName = ProviderName.SqlServer,
                 ConnectionString = AppCommon.ConnectionString
             };
 
             yield return new ConnectionStringSettings
             {
-                Name = DbTypes.Sqlite,
+                Name = ProviderName.SQLite,
                 ProviderName = ProviderName.SQLite,
+                ConnectionString = AppCommon.ConnectionString
+            };
+
+            yield return new ConnectionStringSettings
+            {
+                Name = ProviderName.PostgreSQL,
+                ProviderName = ProviderName.PostgreSQL,
                 ConnectionString = AppCommon.ConnectionString
             };
         }
