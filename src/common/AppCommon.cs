@@ -1,39 +1,78 @@
 namespace ITCentral.Common;
-using System.Reflection;
-using ITCentral.Data;
-using YamlDotNet.RepresentationModel;
+
 public static class AppCommon
 {
     public const bool Success = true;
-    public const string ProgramVersion = "0.0.1";
+
+    public const bool Fail = false;
+
+    public const string ProgramVersion = "0.0.3";
+
     public const string ProgramName = "ITCentral";
+
+    public static string VersionHeader => $"{ProgramName} - Version: {ProgramVersion}";
+
     public const string MessageInfo = "INFO";
+
     public const string MessageWarning = "WARN";
+
     public const string MessageRequest = "REQUEST";
+
     public const string MessageError = "ERROR";
-    public static string LogFilePath {get; private set;} = "";
-    public static int LogDumpTime {get; private set;}
-    public static int SessionTime {get; private set;}
-    public static bool Logging {get; private set;}
-    public static int PortNumber {get; private set;}
-    public static string ConnectionString {get; private set;} = "";
-    public static bool Ssl {get; private set;}
-    public static string HostName {get; private set;} = "";
-    public static string DbType {get; private set;} = "";
-    public static string MasterKey {get; private set;} = "";
-    public static string ApiKey {get; private set;} = "";
 
-    public static IDBCall DbConfig()
-    {
-        return DbType switch
-        {
-            "SqlServer" => new SqlServerCall(ConnectionString),
-            "Sqlite" => new SqlLiteCall(ConnectionString),
-            _ => throw new Exception("Unsupported database type")
-        };
-    }
+    public const int StructuredNormal = 1;
 
-    private static readonly Dictionary<string, string> keyMap = new()
+    public const int StructuredDifferentFiles = 2;
+
+    public static int LogDumpTime { get; private set; }
+
+    public static int MaxDegreeParallel { get; set; }
+
+    public static ParallelOptions ParallelRule => new() { MaxDegreeOfParallelism = MaxDegreeParallel };
+
+    public static int ConsumerFetchMax { get; private set; }
+
+    public static int ProducerLineMax { get; private set; }
+
+    public static int SessionTime { get; private set; }
+
+    public static int BulkCopyTimeout { get; private set; }
+
+    public static int ConsumerAttemptMax { get; private set; }
+
+    public static bool Logging { get; private set; }
+
+    public static int PortNumber { get; private set; }
+
+    public static int LdapPort { get; private set; }
+
+    public static string ConnectionString { get; private set; } = "";
+
+    public static bool Ssl { get; private set; }
+
+    public static bool LdapSsl { get; private set; }
+
+    public static bool LdapVerifyCertificate { get; private set; }
+
+    public static string HostName { get; private set; } = "";
+
+    public static string DbType { get; private set; } = "";
+
+    public static string MasterKey { get; private set; } = "";
+
+    public static string ApiKey { get; private set; } = "";
+
+    public static string LdapServer { get; private set; } = "";
+
+    public static string LdapDomain { get; private set; } = "";
+
+    public static string LdapBaseDn { get; private set; } = "";
+
+    public static string LdapGroups { get; private set; } = "";
+
+    public static string LdapGroupDN { get; private set; } = "";
+
+    public static readonly Dictionary<string, string> keyMap = new()
     {
         { "PORT_NUMBER", nameof(PortNumber) },
         { "DB_TYPE", nameof(DbType) },
@@ -42,105 +81,47 @@ public static class AppCommon
         { "HOST_NAME", nameof(HostName) },
         { "ENABLE_LOG_DUMP", nameof(Logging) },
         { "LOG_DUMP_TIME", nameof(LogDumpTime) },
-        { "LOG_FILE_PATH", nameof(LogFilePath) },
         { "ENCRYPT_KEY", nameof(MasterKey) },
         { "SESSION_TIME", nameof(SessionTime) },
         { "API_KEY", nameof(ApiKey) },
+        { "MAX_DEGREE_PARALLEL", nameof(MaxDegreeParallel) },
+        { "MAX_CONSUMER_FETCH", nameof(ConsumerFetchMax) },
+        { "MAX_CONSUMER_ATTEMPT", nameof(ConsumerAttemptMax) },
+        { "MAX_PRODUCER_LINECOUNT", nameof(ProducerLineMax) },
+        { "LDAP_DOMAIN", nameof(LdapDomain) },
+        { "LDAP_SERVER", nameof(LdapServer) },
+        { "LDAP_PORT", nameof(LdapPort) },
+        { "LDAP_BASEDN", nameof(LdapBaseDn) },
+        { "LDAP_GROUPS", nameof(LdapGroups) },
+        { "LDAP_GROUPDN", nameof(LdapGroupDN) },
+        { "LDAP_SSL", nameof(LdapSsl) },
+        { "LDAP_VERIFY_CERTIFICATE", nameof(LdapVerifyCertificate) },
+        { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
-    public static void ShowHelp() 
+
+    public static void ShowHelp()
     {
         ShowSignature();
         Console.WriteLine(
-            $"Usage: {ProgramName} [options]\n" +
-            "Options:\n" +
+            $"Usage: {VersionHeader} \n" +
+            "   [Options]: \n" +
             "   -h --help      Show this help message\n" +
             "   -v --version   Show version information\n" +
-            "   -e --environment    [Options]  Use configuration variables\n\n" +
-            "   [Options]: \n" +
-            "   Port, DbType, ConnectionString, SSL, Host, Logging, LogTime, LogPath"
+            "   -e --environment  Use environment variables for configuration\n" +
+            "   -f --file  Use yml file for configuration\n" +
+            "   -c --console  Use command-line arguments for configuration"
             );
     }
 
-    public static void ShowVersion() 
+    public static void ShowVersion()
     {
-        ShowSignature();
-        Console.WriteLine($"{ProgramName} version {ProgramVersion}");
+        Console.WriteLine(VersionHeader);
     }
 
-    private static void ShowSignature() 
+    private static void ShowSignature()
     {
         Console.WriteLine(
             "Developed by Leonardo M. Baptista\n"
         );
-    }
-
-    public static void InitializeFromArgs(string[] args)
-    {
-        var values = args.Skip(1);
-
-        for(int i = 0; i < values.Count(); i++) {
-            var key = keyMap.ElementAt(i).Value;
-            var propertyInfo = typeof(AppCommon).GetProperty(key, BindingFlags.Public | BindingFlags.Static);
-
-            if(propertyInfo != null && propertyInfo.CanWrite)
-            {
-                var val = values.ElementAt(i);
-                var convert = Convert.ChangeType(val, propertyInfo.PropertyType);
-                propertyInfo.SetValue(null, convert);
-            }
-        }  
-    }
-
-    public static void InitializeFromEnv()
-    {
-        Dictionary<string, string?> config = keyMap.ToDictionary(
-            env => env.Key,
-            env => Environment.GetEnvironmentVariable(env.Key)
-        );
-
-        if (config.Any(variable => variable.Value is null)) {
-            throw new Exception("Environment variable not configured!");
-        }
-
-        foreach (var env in keyMap)
-        {
-            var propertyInfo = typeof(AppCommon).GetProperty(env.Value, BindingFlags.Public | BindingFlags.Static);
-            if (propertyInfo != null && propertyInfo.CanWrite)
-            {
-                var value = Convert.ChangeType(config[env.Key], propertyInfo.PropertyType);
-                propertyInfo.SetValue(null, value);
-            }
-        }
-    }
-
-    public static void InitializeFromYaml(string yamlFilePath)
-    {
-        if (!File.Exists(yamlFilePath))
-        {
-            throw new FileNotFoundException($"Configuration file not found: {yamlFilePath}");
-        }
-
-        var yamlContent = File.ReadAllText(yamlFilePath);
-        var yaml = new YamlStream();
-        yaml.Load(new StringReader(yamlContent));
-
-        var root = (YamlMappingNode)yaml.Documents[0].RootNode;
-
-        foreach (var env in keyMap)
-        {
-            var key = env.Key;
-            var propertyName = env.Value;
-            var propertyInfo = typeof(AppCommon).GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static);
-
-            if (propertyInfo != null && propertyInfo.CanWrite)
-            {
-                if (root.Children.TryGetValue(new YamlScalarNode(key), out var valueNode))
-                {
-                    var value = valueNode.ToString();
-                    var convertedValue = Convert.ChangeType(value, propertyInfo.PropertyType);
-                    propertyInfo.SetValue(null, convertedValue);
-                }
-            }
-        }
     }
 }

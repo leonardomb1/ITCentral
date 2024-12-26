@@ -1,39 +1,78 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
+using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class SessionService : ServiceBase<Session>
+public class SessionService : ServiceBase, IDisposable
 {
-    public SessionService() : base() {}
+    private readonly bool disposed = false;
+
+    public SessionService() : base() { }
+
     public async Task<Result<Session?, Error>> GetSession(string sessionId)
     {
-        var session = await Repository.ReadFromDb<Session, string>("SessionId", sessionId);
-        if(!session.IsSuccessful) {
-            return session.Error;
-        }
+        try
+        {
+            var session = from s in Repository.Sessions
+                          where s.SessionId == sessionId
+                          select s;
 
-        return session.Value.FirstOrDefault();
+            return await session.FirstOrDefaultAsync();
+
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
 
     public async Task<Result<bool, Error>> Create(string sessionId, DateTime expiration)
     {
-        var insert = await Repository.Insert(new Session(sessionId, expiration));
-        if(!insert.IsSuccessful) {
-            return insert.Error;
+        try
+        {
+            var insert = await Repository.InsertAsync(new Session(sessionId, expiration));
+            return AppCommon.Success;
         }
-        
-        return AppCommon.Success;
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
 
     public async Task<Result<bool, Error>> Delete(string sessionId)
     {
-        var delete = await Repository.DeleteFromDb<Session, string>("SessionId", sessionId);
-        if(!delete.IsSuccessful) {
-            return delete.Error;
-        }
+        try
+        {
+            await Repository.Sessions
+                .Where(s => s.SessionId == sessionId)
+                .DeleteAsync();
 
-        return delete.Value;
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposed && !disposing)
+        {
+            Repository.Dispose();
+        }
+    }
+
+    ~SessionService()
+    {
+        Dispose(false);
     }
 }

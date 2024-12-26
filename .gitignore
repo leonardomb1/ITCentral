@@ -3,7 +3,7 @@
 *.vscode
 *.db
 *.log
-*config.yml
+*config*.yml
 *db
 *log
 *.env

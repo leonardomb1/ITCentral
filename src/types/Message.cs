@@ -1,25 +1,34 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ITCentral.Models;
+namespace ITCentral.Types;
 
-public class Message<T> : IDisposable
+public sealed class Message<T> : IDisposable
 {
-    public short Status { get; private set; }
-    public string Information { get; private set; }
-    public bool Error { get; private set; }
-    public int? EntityCount { get; private set; }
-    public List<T>? Content { get; private set; }
+    [JsonRequired]
+    public short StatusCode { get; set; }
+    
+    [JsonRequired]
+    public string Information { get; set; }
+    
+    [JsonRequired]
+    public bool Error { get; set; }
+    
+    public int? EntityCount { get; set; }
+    
+    public List<T>? Content { get; set; }
+    
+    [JsonIgnore]
     private readonly bool disposed = false;
 
     public Message(
         short statusId,
         string info,
         bool err,
-        List<T> values
+        List<T>? values = null
     )
     {
-        Status = statusId;
+        StatusCode = statusId;
         Information = info;
         Error = err;
         Content = values;

@@ -5,21 +5,18 @@ using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class ExtractionService : ServiceBase, IService<Extraction, int>, IDisposable
+public class DestinationService : ServiceBase, IService<Destination, int>, IDisposable
 {
     private readonly bool disposed = false;
 
-    public ExtractionService() : base() { }
+    public DestinationService() : base() { }
 
-    public async Task<Result<List<Extraction>, Error>> Get(Dictionary<string, string?>? filters)
+    public async Task<Result<List<Destination>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
         try
         {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         select e;
+            var select = from db in Repository.Destinations
+                         select db;
 
             if (filters != null)
             {
@@ -28,9 +25,6 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
                     select = filter.Key.ToLower() switch
                     {
                         "name" => select.Where(e => e.Name == filter.Value),
-                        "schedule" when int.TryParse(filter.Value, out var schId) => select.Where(e => e.ScheduleId == schId),
-                        "origin" when int.TryParse(filter.Value, out var oriId) => select.Where(e => e.OriginId == oriId),
-                        "destination" when int.TryParse(filter.Value, out var destId) => select.Where(e => e.DestinationId == destId),
                         _ => select
                     };
                 }
@@ -44,16 +38,13 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public async Task<Result<Extraction?, Error>> Get(int id)
+    public async Task<Result<Destination?, Error>> Get(int id)
     {
         try
         {
-            var select = from e in Repository.Extractions
-                         .LoadWith(e => e.Schedule)
-                         .LoadWith(e => e.Origin)
-                         .LoadWith(e => e.Destination)
-                         where e.Id == id
-                         select e;
+            var select = from db in Repository.Destinations
+                         where db.Id == id
+                         select db;
 
             return await select.FirstOrDefaultAsync();
         }
@@ -63,11 +54,14 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public async Task<Result<bool, Error>> Post(Extraction extraction)
+    public async Task<Result<bool, Error>> Post(Destination destination)
     {
         try
         {
-            var insert = await Repository.InsertAsync(extraction);
+            destination.DbString = Encryption.SymmetricEncryptAES256(destination.DbString, AppCommon.MasterKey);
+
+
+            var insert = await Repository.InsertAsync(destination);
             return AppCommon.Success;
         }
         catch (Exception ex)
@@ -76,13 +70,14 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    public async Task<Result<bool, Error>> Put(Extraction extraction, int id)
+    public async Task<Result<bool, Error>> Put(Destination destination, int id)
     {
         try
         {
-            extraction.Id = id;
+            destination.DbString = Encryption.SymmetricEncryptAES256(destination.DbString, AppCommon.MasterKey);
+            destination.Id = id;
 
-            await Repository.UpdateAsync(extraction);
+            await Repository.UpdateAsync(destination);
 
             return AppCommon.Success;
         }
@@ -96,8 +91,8 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
     {
         try
         {
-            await Repository.Extractions
-                .Where(e => e.Id == id)
+            await Repository.Destinations
+                .Where(db => db.Id == id)
                 .DeleteAsync();
 
             return AppCommon.Success;
@@ -122,7 +117,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
     }
 
-    ~ExtractionService()
+    ~DestinationService()
     {
         Dispose(false);
     }

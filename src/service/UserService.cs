@@ -1,93 +1,149 @@
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Types;
+using LinqToDB;
 
 namespace ITCentral.Service;
 
-public class UserService : ServiceBase<User>, IService<User, int>
+public class UserService : ServiceBase, IService<User, int>, IDisposable
 {
+    private readonly bool disposed = false;
+
     public UserService() : base() { }
-    public async Task<Result<List<User>, Error>> Get()
-    {
-        var select = await Repository.ReadFromDb<User>();
-        if(!select.IsSuccessful) {
-            return select.Error;
-        }
 
-        return select.Value!;
-    }
-    public async Task<Result<User?, Error>> GetById(int id)
+    public async Task<Result<List<User>, Error>> Get(Dictionary<string, string?>? filters = null)
     {
-        var selectById = await Repository.ReadFromDb<User, int>("id", id);
-        if(!selectById.IsSuccessful) {
-            return selectById.Error;
-        }
+        try
+        {
+            var select = from u in Repository.Users
+                         select u;
 
-        return selectById.Value.FirstOrDefault();
+            if (filters != null)
+            {
+                foreach (var filter in filters)
+                {
+                    select = filter.Key.ToLower() switch
+                    {
+                        "name" => select.Where(e => e.Name == filter.Value),
+                        _ => select
+                    };
+                }
+            }
+
+            var result = await select.ToListAsync();
+            result.ForEach(u => u.Password = null);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
-    public async Task<Result<List<User>, Error>> GetByName(string name)
+
+    public async Task<Result<User?, Error>> Get(int id)
     {
-        var selectByName = await Repository.ReadFromDb<User, string>("name", name);
-        if(!selectByName.IsSuccessful) {
-            return selectByName.Error;
-        }
+        try
+        {
+            var select = from u in Repository.Users
+                         where u.Id == id
+                         select u;
 
-        return selectByName.Value!;
+            foreach (var u in select) u.Password = null;
+
+            return await select.FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
+
     public async Task<Result<string, Error>> GetUserCredential(string userName)
     {
-        var search = await GetByName(userName);
-        if(!search.IsSuccessful) {
-            return search.Error;
-        }
-
-        if (search.Value is null)
+        try
         {
-            return "";
+            var search = from u in Repository.Users
+                         where u.Name == userName
+                         select u;
+
+            var result = await search.FirstOrDefaultAsync();
+
+            return result?.Password == null ? "" : Encryption.SymmetricDecryptAES256(result.Password, AppCommon.MasterKey) ?? "";
         }
-
-        var user = search.Value.FirstOrDefault();
-
-        return Encryption.SymmetricDecryptAES256(user?.Password ?? "", AppCommon.MasterKey);
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
+
     public async Task<Result<bool, Error>> Post(User user)
     {
         User encryptedUser = user;
-
         Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
-        var insert = await Repository.Insert(encryptedUser);
-        if(!insert.IsSuccessful) {
-            return insert.Error;
-        }
 
-        return AppCommon.Success;
+        try
+        {
+            var insert = await Repository.InsertAsync(encryptedUser);
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
-    public async Task<Result<User?, Error>> Put(User user, int id)
+
+    public async Task<Result<bool, Error>> Put(User user, int id)
     {
         User encryptedUser = user;
-
         Encryption.SymmetricEncryptAES256(encryptedUser.Password!, AppCommon.MasterKey);
 
-        var select = await Repository.CheckRecord<User, int>("id", id);
-        if(!select.IsSuccessful) {
-            return select.Error;
-        }
+        try
+        {
+            user.Id = id;
 
-        encryptedUser.Id = id;
-        var update = await Repository.Update("id", encryptedUser, id);
-        if(!update.IsSuccessful) {
-            return update.Error;
-        }
+            await Repository.UpdateAsync(user);
 
-        return update.Value;
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
     }
+
     public async Task<Result<bool, Error>> Delete(int id)
     {
-        var delete = await Repository.DeleteFromDb<User, int>("id", id);
-        if(!delete.IsSuccessful) {
-            return delete.Error;
-        }
+        try
+        {
+            await Repository.Users
+                .Where(u => u.Id == id)
+                .DeleteAsync();
 
-        return delete.Value;
+            return AppCommon.Success;
+        }
+        catch (Exception ex)
+        {
+            return new Error(ex.Message, ex.StackTrace, false);
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposed && !disposing)
+        {
+            Repository.Dispose();
+        }
+    }
+
+    ~UserService()
+    {
+        Dispose(false);
     }
 }

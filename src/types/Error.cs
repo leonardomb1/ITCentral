@@ -1,14 +1,26 @@
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 
-namespace ITCentral.Models;
+namespace ITCentral.Types;
 
 public sealed class Error : IDisposable
 {
-    public string ExceptionMessage {get; private set;}
-    public string? StackTrace {get; private set;}
-    public string FaultedMethod {get; private set;}
-    public bool IsPartialSuccess {get; private set;}
-    public Dictionary<string, object> UsedArguments {get; private set;}
+    [JsonPropertyName("Message")]
+    public string ExceptionMessage {get; set;}
+
+    [JsonIgnore]
+    public string? StackTrace {get; set;}
+    
+    [JsonIgnore]
+    public string FaultedMethod {get; set;}
+    
+    [JsonIgnore]
+    public bool IsPartialSuccess {get; set;}
+    
+    [JsonIgnore]
+    public Dictionary<string, object> UsedArguments {get; set;}
+    
+    [JsonIgnore]
     private readonly bool disposed = false;
 
     public Error(
@@ -29,6 +41,7 @@ public sealed class Error : IDisposable
             .ToDictionary(p => p.Name ?? "Unknown", p => (object)p.Attributes)
             ?? [];
     }
+    
     public void Dispose()
     {
         Dispose(true);

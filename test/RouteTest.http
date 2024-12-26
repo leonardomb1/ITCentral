@@ -1,12 +1,29 @@
 @url = http://127.0.0.1:10000/api
-@users = /users
 @schedules = /schedules
+@systems = /systems
+@extractions = /extractions
 
 #@name UsersList
 POST {{url}}{{schedules}}
 Key: ABC123
 {
-    "Name" : "Agenda 01",
+    "ScheduleName" : "test 01",
     "Status" : true,
-    "Valor" : 60
+    "Value" : 60
+}
+
+POST {{url}}{{systems}}
+Key: ABC123
+{
+    "SystemName" : "test",
+    "ConnectionString" : "Data Source"
+}
+POST {{url}}{{extractions}}
+Key: ABC123
+{
+    "ExtractionName": "test",
+    "IndexName": "test",
+    "Type": "T",
+    "ScheduleId": 1,
+    "SystemId": 1
 }

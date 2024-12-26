@@ -7,7 +7,7 @@ using WatsonWebserver.Core;
 
 namespace ITCentral.Controller;
 
-public class ScheduleController : ControllerBase, IController<HttpContextBase>
+public class DestinationController : ControllerBase, IController<HttpContextBase>
 {
     public async Task Get(HttpContextBase ctx)
     {
@@ -16,20 +16,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
         var filters = ctx.Request.Query.Elements.AllKeys
             .ToDictionary(key => key ?? "", key => ctx.Request.Query.Elements[key]);
 
-        var invalidFilters = filters.Where(f =>
-            (f.Key == "status") &&
-            !bool.TryParse(f.Value, out _)).ToList();
-
-        if (invalidFilters.Count > 0)
-        {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
-            using Message<string> errMsg = new(statusId, "Bad Request", true);
-            await context.Response.Send(errMsg.AsJsonString());
-            return;
-        }
-
-        using var schedule = new ScheduleService();
-        var result = await schedule.Get(filters);
+        using var destination = new DestinationService();
+        var result = await destination.Get(filters);
 
         if (!result.IsSuccessful)
         {
@@ -39,7 +27,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<Schedule> res = new(statusId, "OK", false, result.Value);
+        using Message<Destination> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -47,7 +35,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -55,8 +43,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var schedule = new ScheduleService();
-        var result = await schedule.Get(scheduleId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Get(destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -74,7 +62,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
 
-        using Message<Schedule> res = new(statusId, "OK", false, [result.Value]);
+        using Message<Destination> res = new(statusId, "OK", false, [result.Value]);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -82,7 +70,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<Schedule>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Destination>(ctx.Request.DataAsString);
 
         if (!body.IsSuccessful)
         {
@@ -92,8 +80,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var schedule = new ScheduleService();
-        var result = await schedule.Post(body.Value);
+        using var Destination = new DestinationService();
+        var result = await Destination.Post(body.Value);
 
         if (!result.IsSuccessful)
         {
@@ -110,7 +98,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        var body = Converter.TryDeserializeJson<Schedule>(ctx.Request.DataAsString);
+        var body = Converter.TryDeserializeJson<Destination>(ctx.Request.DataAsString);
 
         if (!body.IsSuccessful)
         {
@@ -120,7 +108,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -128,8 +116,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var schedule = new ScheduleService();
-        var result = await schedule.Put(body.Value, scheduleId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Put(body.Value, destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -145,7 +133,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<string> res = new(statusId, "OK", false);
+        using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 
@@ -153,7 +141,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
     {
         short statusId;
 
-        if (!int.TryParse(ctx.Request.Url.Parameters["scheduleId"], null, out int scheduleId))
+        if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
             statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
@@ -161,8 +149,8 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
             return;
         }
 
-        using var schedule = new ScheduleService();
-        var result = await schedule.Delete(scheduleId);
+        using var Destination = new DestinationService();
+        var result = await Destination.Delete(destinationId);
 
         if (!result.IsSuccessful)
         {
@@ -171,7 +159,7 @@ public class ScheduleController : ControllerBase, IController<HttpContextBase>
         }
 
         statusId = BeginRequest(ctx, HttpStatusCode.OK);
-        using Message<Schedule> res = new(statusId, "OK", false);
+        using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
 }

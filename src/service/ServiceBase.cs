@@ -1,24 +1,13 @@
-using ITCentral.Common;
 using ITCentral.Data;
 
 namespace ITCentral.Service;
 
-public abstract class ServiceBase<M>
+public abstract class ServiceBase
 {
-    protected readonly IDBCall Repository;
+    protected readonly CallBase Repository;
+
     public ServiceBase()
     {
-        Repository = AppCommon.DbConfig();
-        var lookup = Repository.SyncLookup<M>()
-            .GetAwaiter()
-            .GetResult();
-        if(!lookup.IsSuccessful) {
-            throw new Exception(
-                $"Service Initialization Error: {lookup.Error.FaultedMethod} - {lookup.Error.ExceptionMessage}" 
-            );
-        }
-        if(!lookup.Value) {
-            Repository.CreateTable<M>();
-        }
+        Repository = new CallBase();
     }
 }
