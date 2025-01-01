@@ -45,6 +45,10 @@ public class RecordService : ServiceBase, IDisposable
                 {
                     select = select.OrderByDescending(x => x.TimeStamp).Take(count);
                 }
+                else
+                {
+                    select = select.OrderByDescending(x => x.TimeStamp);
+                }
             }
             else
             {
@@ -56,7 +60,7 @@ public class RecordService : ServiceBase, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -71,7 +75,7 @@ public class RecordService : ServiceBase, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -84,7 +88,7 @@ public class RecordService : ServiceBase, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -99,7 +103,7 @@ public class RecordService : ServiceBase, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

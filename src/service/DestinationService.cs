@@ -34,7 +34,7 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -50,7 +50,7 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -66,7 +66,7 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -83,7 +83,7 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -99,7 +99,7 @@ public class DestinationService : ServiceBase, IService<Destination, int>, IDisp
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

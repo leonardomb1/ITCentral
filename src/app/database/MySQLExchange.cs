@@ -128,7 +128,7 @@ public class MySQLExchange : DBExchange
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 }

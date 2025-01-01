@@ -17,7 +17,7 @@ public class MSSQLExchange : DBExchange
 
     protected override StringBuilder AddPrimaryKey(StringBuilder stringBuilder, string index, string tableName, string? file)
     {
-        string indexGroup = file == null ? $"{index} ASC" : $"{index} ASC, {tableName}_EMPRESA ASC";
+        string indexGroup = file == null ? $"{index} ASC" : $"{index} ASC, {tableName}_FILE ASC";
         return stringBuilder.Append($" CONSTRAINT IX_{tableName}_SK PRIMARY KEY NONCLUSTERED ({indexGroup}),");
     }
 
@@ -119,7 +119,7 @@ public class MSSQLExchange : DBExchange
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 }

@@ -40,7 +40,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -59,7 +59,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -72,7 +72,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -88,7 +88,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -104,7 +104,7 @@ public class ExtractionService : ServiceBase, IService<Extraction, int>, IDispos
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

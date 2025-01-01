@@ -37,7 +37,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -55,7 +55,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -73,7 +73,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -89,7 +89,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -108,7 +108,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -124,7 +124,7 @@ public class UserService : ServiceBase, IService<User, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

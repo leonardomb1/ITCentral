@@ -1,9 +1,9 @@
-using System.Net;
 using ITCentral.Common;
 using ITCentral.Models;
 using ITCentral.Service;
 using ITCentral.Types;
 using WatsonWebserver.Core;
+using static System.Net.HttpStatusCode;
 
 namespace ITCentral.Controller;
 
@@ -25,7 +25,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, OK);
 
         using Message<Destination> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
@@ -37,7 +37,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -54,13 +54,13 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (result.Value is null)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.OK);
+            statusId = BeginRequest(ctx, OK);
             using Message<string> msg = new(statusId, "No Result", false);
             await context.Response.Send(msg.AsJsonString());
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, OK);
 
         using Message<Destination> res = new(statusId, "OK", false, [result.Value]);
         await context.Response.Send(res.AsJsonString());
@@ -74,7 +74,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!body.IsSuccessful)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -89,7 +89,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.Created);
+        statusId = BeginRequest(ctx, Created);
         using Message<string> res = new(statusId, "Created", false);
         await context.Response.Send(res.AsJsonString());
     }
@@ -102,7 +102,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!body.IsSuccessful)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -110,7 +110,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -127,12 +127,12 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!result.Value)
         {
-            _ = BeginRequest(ctx, HttpStatusCode.NoContent);
+            _ = BeginRequest(ctx, NoContent);
             await context.Response.Send("");
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, OK);
         using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
@@ -143,7 +143,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
 
         if (!int.TryParse(ctx.Request.Url.Parameters["destinationId"], null, out int destinationId))
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest);
+            statusId = BeginRequest(ctx, BadRequest);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -158,7 +158,7 @@ public class DestinationController : ControllerBase, IController<HttpContextBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK);
+        statusId = BeginRequest(ctx, OK);
         using Message<Destination> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }

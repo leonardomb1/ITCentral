@@ -35,7 +35,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -51,7 +51,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -64,7 +64,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -80,7 +80,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -96,7 +96,7 @@ public class ScheduleService : ServiceBase, IService<Schedule, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

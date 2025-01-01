@@ -34,7 +34,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -50,7 +50,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -65,7 +65,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -82,7 +82,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -98,7 +98,7 @@ public class OriginService : ServiceBase, IService<Origin, int>, IDisposable
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 

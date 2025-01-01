@@ -11,8 +11,6 @@ public class CallBase : DataConnection
 
     public ITable<Origin> Origins => this.GetTable<Origin>();
 
-    public ITable<Session> Sessions => this.GetTable<Session>();
-
     public ITable<User> Users => this.GetTable<User>();
 
     public ITable<Schedule> Schedules => this.GetTable<Schedule>();

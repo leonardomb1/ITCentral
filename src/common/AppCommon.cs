@@ -70,6 +70,12 @@ public static class AppCommon
 
     public static string LdapGroups { get; private set; } = "";
 
+    public static string Nodes { get; private set; } = "";
+
+    public static string AllowedIps { get; private set; } = "";
+
+    public static string NetworkIpMask { get; private set; } = "";
+
     public static string LdapGroupDN { get; private set; } = "";
 
     public static readonly Dictionary<string, string> keyMap = new()
@@ -96,6 +102,9 @@ public static class AppCommon
         { "LDAP_GROUPDN", nameof(LdapGroupDN) },
         { "LDAP_SSL", nameof(LdapSsl) },
         { "LDAP_VERIFY_CERTIFICATE", nameof(LdapVerifyCertificate) },
+        { "NODES", nameof(Nodes) },
+        { "ALLOWED_IPS", nameof(AllowedIps) },
+        { "NETWORK_IPMASK", nameof(NetworkIpMask) },
         { "BULK_TIMEOUT_SEC", nameof(BulkCopyTimeout) },
     };
 

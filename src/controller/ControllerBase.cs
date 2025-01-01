@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using ITCentral.Common;
 using ITCentral.Types;
 using WatsonWebserver.Core;
+using static System.Net.HttpStatusCode;
 
 namespace ITCentral.Controller;
 
@@ -38,7 +39,7 @@ public class ControllerBase
             $"Faulted Method was: {error.FaultedMethod}, with arguments: {error.UsedArguments}",
             AppCommon.MessageError
         );
-        short statusId = BeginRequest(ctx, HttpStatusCode.InternalServerError);
+        short statusId = BeginRequest(ctx, InternalServerError);
         using Message<Error> errMsg = new(statusId, "Internal Server Error", true, [error]);
         await context.Response.Send(errMsg.AsJsonString());
     }

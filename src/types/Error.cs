@@ -6,42 +6,42 @@ namespace ITCentral.Types;
 public sealed class Error : IDisposable
 {
     [JsonPropertyName("Message")]
-    public string ExceptionMessage {get; set;}
+    public string ExceptionMessage { get; set; }
 
     [JsonIgnore]
-    public string? StackTrace {get; set;}
-    
+    public string? StackTrace { get; set; }
+
     [JsonIgnore]
-    public string FaultedMethod {get; set;}
-    
+    public string FaultedMethod { get; set; }
+
     [JsonIgnore]
-    public bool IsPartialSuccess {get; set;}
-    
+    public bool IsPartialSuccess { get; set; }
+
     [JsonIgnore]
-    public Dictionary<string, object> UsedArguments {get; set;}
-    
+    public Dictionary<string, object> UsedArguments { get; set; }
+
     [JsonIgnore]
     private readonly bool disposed = false;
 
     public Error(
         string msg,
-        string? stk,
-        bool partialSuccess,
+        string? stk = null,
+        bool partialSuccess = false,
         [CallerMemberName] string? method = null
-    ) 
+    )
     {
         ExceptionMessage = msg;
         StackTrace = stk;
         IsPartialSuccess = partialSuccess;
         FaultedMethod = method ?? "n/a";
-        
+
         var methodInfo = GetType().GetMethod(method ?? string.Empty);
         UsedArguments = methodInfo?
             .GetParameters()
             .ToDictionary(p => p.Name ?? "Unknown", p => (object)p.Attributes)
             ?? [];
     }
-    
+
     public void Dispose()
     {
         Dispose(true);
@@ -61,7 +61,7 @@ public sealed class Error : IDisposable
                 UsedArguments.Clear();
             }
         }
-    } 
+    }
 
     ~Error()
     {

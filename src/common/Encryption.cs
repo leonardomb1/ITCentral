@@ -1,5 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using ITCentral.Types;
 
 namespace ITCentral.Common;
 
@@ -67,7 +70,7 @@ public static class Encryption
         return hashBytes;
     }
 
-    private static string GetStringFromByteArray(byte[] bytes) 
+    private static string GetStringFromByteArray(byte[] bytes)
     {
         StringBuilder builder = new();
 
@@ -76,5 +79,64 @@ public static class Encryption
             builder.Append(bytes[i].ToString("x2"));
         }
         return builder.ToString();
+    }
+
+    public static string GenerateJwt(string ip, string authSecret)
+    {
+        string issuer = Environment.MachineName;
+        string audience = ip;
+
+        DateTime expiration = DateTime.Now.AddSeconds(AppCommon.SessionTime);
+
+        string header = JsonSerializer.Serialize(new { alg = "AES256", typ = "JWT" });
+        string headerBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(header));
+
+        string payload = JsonSerializer.Serialize(new { issuer, audience, expiration });
+        string encrypted = SymmetricEncryptAES256(payload, authSecret);
+
+        return $"{headerBase64}.{encrypted}";
+    }
+
+    public static Result<bool, Error> ValidateJwt(string ip, string token, string authSecret)
+    {
+        string[] parts = token.Split('.');
+
+        if (parts.Length != 2)
+        {
+            return new Error("Invalid token format.");
+        }
+
+        string headerJson = Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+
+        try
+        {
+            JsonObject header = JsonSerializer.Deserialize<JsonObject>(headerJson)!;
+
+            if (
+                !header.TryGetPropertyValue("alg", out var alg) &&
+                alg?.GetValue<string>() == "AES256"
+            ) return new Error("Invalid encryption method.");
+
+            string decrypted = SymmetricDecryptAES256(parts[1], authSecret);
+            JsonObject payload = JsonSerializer.Deserialize<JsonObject>(decrypted)!;
+
+            string[] availableIssuers = AppCommon.Nodes.Split("|");
+
+            if (!payload.TryGetPropertyValue("audience", out var audience)) return new Error("Invalid token.");
+            if (!payload.TryGetPropertyValue("issuer", out var issuer)) return new Error("Invalid token.");
+            if (!payload.TryGetPropertyValue("expiration", out var expiration)) return new Error("Invalid token.");
+
+            if (
+                ip == audience!.GetValue<string>() &&
+                availableIssuers.Contains(issuer!.GetValue<string>()) &&
+                DateTime.UtcNow.ToLocalTime() <= Convert.ToDateTime(expiration!.GetValue<string>())
+            ) return AppCommon.Success;
+
+            return new Error("Validation failed.");
+        }
+        catch
+        {
+            return new Error("Invalid token.");
+        }
     }
 }

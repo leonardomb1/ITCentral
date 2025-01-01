@@ -63,7 +63,7 @@ public static class LdapAuth
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 }

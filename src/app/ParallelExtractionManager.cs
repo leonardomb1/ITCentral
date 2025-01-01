@@ -23,6 +23,11 @@ public static class ParallelExtractionManager
 
         await Task.WhenAll(producer, consumer);
 
+        if (errors.Count > 0)
+        {
+            return errors;
+        }
+
         return AppCommon.Success;
     }
 

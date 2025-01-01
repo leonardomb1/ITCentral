@@ -81,7 +81,7 @@ public abstract class DBExchange
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
     }
 
@@ -132,7 +132,7 @@ public abstract class DBExchange
         }
         catch (Exception ex)
         {
-            return new Error(ex.Message, ex.StackTrace, false);
+            return new Error(ex.Message);
         }
         finally
         {

@@ -1,8 +1,8 @@
-using System.Net;
 using ITCentral.Models;
 using ITCentral.Service;
 using ITCentral.Types;
 using WatsonWebserver.Core;
+using static System.Net.HttpStatusCode;
 
 namespace ITCentral.Controller;
 
@@ -21,7 +21,7 @@ public class RecordController : ControllerBase
 
         if (invalidFilters.Count > 0)
         {
-            statusId = BeginRequest(ctx, HttpStatusCode.BadRequest, dumpLog: false);
+            statusId = BeginRequest(ctx, BadRequest, dumpLog: false);
             using Message<string> errMsg = new(statusId, "Bad Request", true);
             await context.Response.Send(errMsg.AsJsonString());
             return;
@@ -36,7 +36,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
+        statusId = BeginRequest(ctx, OK, dumpLog: false);
 
         using Message<Record> res = new(statusId, "OK", false, result.Value);
         await context.Response.Send(res.AsJsonString());
@@ -55,7 +55,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
+        statusId = BeginRequest(ctx, OK, dumpLog: false);
 
         using Message<string> res = new(statusId, "OK", false, [$"Record count is: {result.Value}"]);
         await context.Response.Send(res.AsJsonString());
@@ -74,7 +74,7 @@ public class RecordController : ControllerBase
             return;
         }
 
-        statusId = BeginRequest(ctx, HttpStatusCode.OK, dumpLog: false);
+        statusId = BeginRequest(ctx, OK, dumpLog: false);
         using Message<string> res = new(statusId, "OK", false);
         await context.Response.Send(res.AsJsonString());
     }
